@@ -1,0 +1,15 @@
+# Godot
+Game/.godot/
+Game/.import/
+Game/build/
+Game/android/
+*.translation
+
+# Blender / tooling
+__pycache__/
+*.pyc
+.DS_Store
+
+# Costume bake intermediates
+Costume_BaseColor.png
+Costume_ORM.png

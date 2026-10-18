@@ -1,0 +1,132 @@
+{
+  "package": "BLOODLINE Pre-production Package",
+  "version": "1.0",
+  "core_documents": 24,
+  "files": [
+    {
+      "path": "01_Project_Design/00_PROJECT_MASTER_PLAN.md",
+      "bytes": 10652,
+      "sha256": "e7942dc918c61582738a82a1331dd1bfff95fb2e09e33f27ae1c7c9d760e6d97"
+    },
+    {
+      "path": "01_Project_Design/01_GAME_DESIGN_DOCUMENT.md",
+      "bytes": 6420,
+      "sha256": "f72ad53862af57e92602399f9beb9fe28d6f78184f91e79aa5d41d63f4436130"
+    },
+    {
+      "path": "01_Project_Design/02_WORLD_AND_LORE_BIBLE.md",
+      "bytes": 4925,
+      "sha256": "b49f9e021bc8391df35129f5a2633f3ee27fec6a9c1edfb327c48843e032364b"
+    },
+    {
+      "path": "01_Project_Design/03_CHARACTER_ROSTER_BIBLE.md",
+      "bytes": 5321,
+      "sha256": "048d2a7a47d6ee712d5adbc2043549443a23f54674260d7dfd0270c359bf92e1"
+    },
+    {
+      "path": "01_Project_Design/04_COMBAT_SYSTEM_SPECIFICATION.md",
+      "bytes": 6011,
+      "sha256": "0091d9ff0cb9d2abe1d3a33fa67e9bd0a1d6b74a0ae564c30254f4c81da3565b"
+    },
+    {
+      "path": "01_Project_Design/05_GAME_MODES_AND_PROGRESSION.md",
+      "bytes": 4780,
+      "sha256": "679f6042dd09402a507dd5c25969a7446c4888d710f06a8b39cf989f1876b532"
+    },
+    {
+      "path": "02_Art_Assets/06_CHARACTER_ART_AND_DESIGN_GUIDE.md",
+      "bytes": 4558,
+      "sha256": "09e0753f78199341fea970869e937d9eca92ab747d0793a7ef46e7e7c4381ca1"
+    },
+    {
+      "path": "02_Art_Assets/07_3D_CHARACTER_ASSET_PIPELINE.md",
+      "bytes": 6106,
+      "sha256": "3352f194b899d0d1ee24746798019fee2d2839c2035714c5c9b39f6111c16a63"
+    },
+    {
+      "path": "02_Art_Assets/08_ANIMATION_AND_RIGGING_SPEC.md",
+      "bytes": 3976,
+      "sha256": "137e12af5eaea7551eb56517dbc4876a1948e1f415de06a4b9b6aeafb12c6700"
+    },
+    {
+      "path": "02_Art_Assets/09_WEAPONS_AND_EQUIPMENT_PIPELINE.md",
+      "bytes": 3057,
+      "sha256": "3b37ed3704d9369b362e251b42b1e5e016ff7cebcdc247ae94be496fa1e512fb"
+    },
+    {
+      "path": "02_Art_Assets/10_ENVIRONMENT_AND_ARENA_ASSET_PIPELINE.md",
+      "bytes": 3356,
+      "sha256": "5576960b61b97d85681f2aa5861827421a2ab20247e9e0b68d1f743d7635d598"
+    },
+    {
+      "path": "03_Technical_Architecture/11_ENGINE_AND_PLATFORM_ARCHITECTURE.md",
+      "bytes": 4688,
+      "sha256": "1873a6f86d77ceb1acc49cede267dcd5a2ff2007ad3912ce53b360b2df45dbc7"
+    },
+    {
+      "path": "03_Technical_Architecture/12_GAMEPLAY_SYSTEMS_ARCHITECTURE.md",
+      "bytes": 4204,
+      "sha256": "1f32860415733b8053327f4079bc5033833e209cadda8fcac44ee5e710eb8d72"
+    },
+    {
+      "path": "03_Technical_Architecture/13_CHARACTER_DATA_AND_CONTENT_SCHEMA.md",
+      "bytes": 3937,
+      "sha256": "b052f09c941f869fe8ac2d8153fbcb87d866cf0b83dc85b751837fee5a01d822"
+    },
+    {
+      "path": "03_Technical_Architecture/14_AI_AND_OPPONENT_ARCHITECTURE.md",
+      "bytes": 3610,
+      "sha256": "77985b5b8342af3ced247c7b696364dc94b901eda8d597293e058efc77688957"
+    },
+    {
+      "path": "03_Technical_Architecture/15_UI_UX_AND_GAME_FLOW_SPEC.md",
+      "bytes": 3933,
+      "sha256": "b868e27b3b221b19d021c0627ac3a09deac67cee5351682e574d6141ae9f2231"
+    },
+    {
+      "path": "03_Technical_Architecture/16_SAVE_DATA_AND_FUTURE_MULTIPLAYER.md",
+      "bytes": 3350,
+      "sha256": "8bdfa1903730e3df405c87704ffda82491b03bef9bb42f4608ddd7e041e523c5"
+    },
+    {
+      "path": "04_Production_Delivery/17_ANDROID_PERFORMANCE_AND_OPTIMIZATION.md",
+      "bytes": 3195,
+      "sha256": "7196817ec59a575c365ff0fb9c5a169f738d170baf5411f5e334b0d0ab12dc8b"
+    },
+    {
+      "path": "04_Production_Delivery/18_ASSET_LICENSES_AND_SOURCE_REGISTER.md",
+      "bytes": 2878,
+      "sha256": "bae3d7cf773e627f570b664b0c5df57e8d3062e932bb0a206994d9340e66d59a"
+    },
+    {
+      "path": "04_Production_Delivery/19_BUILD_AND_RELEASE_PIPELINE.md",
+      "bytes": 3485,
+      "sha256": "9d36fbd3af5e1c34a4cf90a70f5fdc76da97ab08368ccb40bfc826ec79ccd507"
+    },
+    {
+      "path": "04_Production_Delivery/20_TESTING_AND_ACCEPTANCE_CRITERIA.md",
+      "bytes": 4397,
+      "sha256": "8d7bce28dc6f16d8f0bbf70a3efb99ffb112a807e6b6b8ea511ebb4e827ff4d4"
+    },
+    {
+      "path": "04_Production_Delivery/21_DEVELOPMENT_ROADMAP_AND_MILESTONES.md",
+      "bytes": 4219,
+      "sha256": "d62897d9501e64a7dcecabd51a91996d63bde1fe90905035df8a5d74ce30d6a1"
+    },
+    {
+      "path": "04_Production_Delivery/22_CONTENT_EXPANSION_AND_LIVE_UPDATES.md",
+      "bytes": 2434,
+      "sha256": "ed9f6d65a1792fb6f9da0dee3bb399908452a76349e0b98c33d94c8a6af650fa"
+    },
+    {
+      "path": "04_Production_Delivery/23_RISK_REGISTER_AND_TECHNICAL_DECISIONS.md",
+      "bytes": 4761,
+      "sha256": "fe987c2eeb844ee918a9c0e0cc7a7f8d3f053cab19cd0449a2bdf8d9fe9dde3e"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3646,
+      "sha256": "13311d214aca56a1e748af1f2b68aaeb053224760a77dd92d5aab97ba8810aa4"
+    }
+  ]
+}
