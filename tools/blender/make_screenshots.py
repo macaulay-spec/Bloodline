@@ -8,9 +8,13 @@ Produces:
 
 The shots are rendered from the same rig, the same body, the same costume
 bake and the same idle clip the game loads, inside a reconstruction of the
-arena built from Game/data/arenas.json, and framed with the same camera the
-match camera uses.  What the player sees in the menu is therefore what the
-fighter actually looks like in the ring.
+arena built from Game/data/arenas.json, and framed with the same field of
+view the match camera uses.  What the player sees in the menu is therefore
+what the fighter actually looks like in the ring.
+
+Axes: Blender is Z-up, the game is Y-up.  The game calls the arena width X,
+the arena depth Z and the height Y; here the same numbers are used with the
+height on Z and the depth on Y.
 """
 
 import json
@@ -19,7 +23,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -35,17 +39,32 @@ BAKE_DIR = os.environ.get("BLOODLINE_BAKE", "/tmp/bloodline_bake")
 
 RES_X = 1280
 RES_Y = 720
-SAMPLES = 64
+SAMPLES = 96
 
-# The match camera: 48 degrees of vertical field of view, looking slightly
-# down at the fighters.  Game/scripts/combat/CameraRig.gd.
-CAMERA_FOV = 48.0
+# Game/scripts/combat/CameraRig.gd: 48 degrees of vertical field of view.
+GODOT_FOV = 48.0
+BLENDER_SENSOR = 36.0
+CAMERA_LENS = (BLENDER_SENSOR * 0.5) / math.tan(math.radians(GODOT_FOV) * 0.5)
+
+WORLD_UP = Vector((0.0, 0.0, 1.0))
 
 
 def load_arena(arena_id):
     with open(ARENA_PATH, "r", encoding="utf-8") as fh:
         arenas = json.load(fh)
     return arenas[arena_id]
+
+
+def aim_at(obj, position, target):
+    """Points an object's -Z axis at `target` from `position`, Z-up world."""
+    obj.location = position
+    forward = (Vector(target) - Vector(position)).normalized()
+    right = forward.cross(WORLD_UP)
+    if right.length < 1e-6:
+        right = Vector((1.0, 0.0, 0.0))
+    right.normalize()
+    up = right.cross(forward)
+    obj.rotation_euler = Matrix((right, up, -forward)).transposed().to_euler()
 
 
 def _material(name, color, roughness=0.8, metallic=0.0, emission=None,
@@ -64,10 +83,11 @@ def _material(name, color, roughness=0.8, metallic=0.0, emission=None,
 
 
 def _box(name, size, location, material):
-    bpy.ops.mesh.primitive_cube_add(size=2.0, location=location)
+    """A box whose size is given as (width, depth, height) in Blender axes."""
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
     cube = bpy.context.active_object
     cube.name = name
-    cube.scale = (size[0] / 2.0, size[1] / 2.0, size[2] / 2.0)
+    cube.scale = (size[0], size[1], size[2])
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     cube.data.materials.append(material)
     return cube
@@ -80,13 +100,12 @@ def build_arena(arena):
     accent = arena["accent_color"]
     fog = arena["fog_color"]
     ambient = arena["ambient_color"]
-    floor_size = arena["floor_size"]
+    width = arena["floor_size"][0]
+    depth = arena["floor_size"][1]
     wall_height = arena["wall_height"]
-    depth = floor_size[1] * 0.5
 
     scene = bpy.context.scene
 
-    # The world carries the ambient light and the background colour.
     world = bpy.data.worlds.new("W")
     scene.world = world
     world.use_nodes = True
@@ -99,79 +118,71 @@ def build_arena(arena):
     glow = _material("Accent", accent, roughness=0.4,
                      emission=accent, emission_energy=1.6)
 
-    _box("Floor", (floor_size[0], 0.2, floor_size[1]), (0.0, 0.0, -0.1),
-         floor_mat)
-    _box("BackWall", (floor_size[0], wall_height, 0.4),
-         (0.0, wall_height * 0.5, -depth), wall_mat)
+    # The fighting floor, the back wall and the two side walls.
+    _box("Floor", (width, depth, 0.2), (0.0, 0.0, -0.1), floor_mat)
+    _box("BackWall", (width, 0.4, wall_height),
+         (0.0, -depth * 0.5, wall_height * 0.5), wall_mat)
     for side in (-1.0, 1.0):
-        _box("SideWall", (0.4, wall_height, floor_size[1]),
-             (side * floor_size[0] * 0.5, wall_height * 0.5, 0.0), wall_mat)
+        _box("SideWall", (0.4, depth, wall_height),
+             (side * width * 0.5, 0.0, wall_height * 0.5), wall_mat)
 
     # The glowing boundary strips and the band on the back wall.
     for side in (-1.0, 1.0):
-        _box("BoundaryStrip", (0.12, 0.06, floor_size[1] * 0.8),
-             (side * 10.0, 0.02, 0.0), glow)
-    _box("BackBand", (floor_size[0], 0.1, 0.06),
-         (0.0, 1.1, -depth + 0.25), glow)
+        _box("BoundaryStrip", (0.12, depth * 0.8, 0.06),
+             (side * 10.0, 0.0, 0.02), glow)
+    _box("BackBand", (width, 0.06, 0.1),
+         (0.0, -depth * 0.5 + 0.25, 1.1), glow)
 
-    # Key and rim lights, with the same colour, energy and angle the arena
-    # uses at runtime.
-    for name, colour, energy, angles in (
+    # The key light comes from the front left and above; the rim light from
+    # behind the fighter, the way the arena rig places them.
+    for name, colour, energy, position, target in (
         ("KeyLight", arena["key_light_color"], arena["key_light_energy"],
-         (-52.0, 38.0, 0.0)),
+         (3.2, 4.2, 5.0), (0.0, 0.0, 1.0)),
         ("RimLight", arena["rim_light_color"], arena["rim_light_energy"],
-         (-14.0, -145.0, 0.0)),
+         (-4.2, -3.6, 3.4), (0.0, 0.0, 1.2)),
     ):
         data = bpy.data.lights.new(name, "SUN")
         data.energy = energy
         data.color = (colour[0], colour[1], colour[2])
-        data.angle = math.radians(3.0)
+        data.angle = math.radians(4.0)
         light = bpy.data.objects.new(name, data)
         scene.collection.objects.link(light)
-        light.rotation_euler = tuple(math.radians(a) for a in angles)
+        aim_at(light, position, target)
 
     # A broad soft fill stands in for the engine's ambient light term.
     data = bpy.data.lights.new("AmbientFill", "AREA")
-    data.energy = arena["ambient_energy"] * 420.0
-    data.size = 18.0
+    data.energy = arena["ambient_energy"] * 500.0
+    data.size = 20.0
     data.color = (ambient[0], ambient[1], ambient[2])
     fill = bpy.data.objects.new("AmbientFill", data)
     scene.collection.objects.link(fill)
-    fill.location = (0.0, -1.0, 9.0)
-    fill.rotation_euler = (math.radians(28.0), 0.0, 0.0)
+    aim_at(fill, (0.0, 0.0, 9.0), (0.0, 0.0, 0.0))
 
 
-def build_camera(location, target, lens_offset=0.0):
+def build_camera(location, target):
     data = bpy.data.cameras.new("ShotCam")
-    data.lens = CAMERA_FOV
-    data.sensor_width = 36.0
+    data.lens = CAMERA_LENS
+    data.sensor_width = BLENDER_SENSOR
     data.sensor_fit = "VERTICAL"
     cam = bpy.data.objects.new("ShotCam", data)
     bpy.context.scene.collection.objects.link(cam)
-    cam.location = location
-    target_obj = bpy.data.objects.new("ShotTarget", None)
-    bpy.context.scene.collection.objects.link(target_obj)
-    target_obj.location = target
-    con = cam.constraints.new("TRACK_TO")
-    con.target = target_obj
-    con.track_axis = "TRACK_NEGATIVE_Z"
-    # The world is Z-up, so the camera's up axis has to be Z as well.
-    con.up_axis = "UP_Z"
+    aim_at(cam, location, target)
     bpy.context.scene.camera = cam
     return cam
 
 
-def build_fighter(spec, reset=True):
+def build_fighter(spec, reset=True, skin_body=True):
     """Builds the fighter and leaves the rig on the idle clip."""
     if reset:
         bpy.ops.wm.read_factory_settings(use_empty=True)
     arm = rig.build_armature("Rig")
     body = rig.build_body(arm, spec["proportions"], name="Body")
 
-    arm_mod = body.modifiers.new("Armature", "ARMATURE")
-    arm_mod.object = arm
-    body.parent = arm
-    body.matrix_parent_inverse = arm.matrix_world.inverted()
+    if skin_body:
+        arm_mod = body.modifiers.new("Armature", "ARMATURE")
+        arm_mod.object = arm
+        body.parent = arm
+        body.matrix_parent_inverse = arm.matrix_world.inverted()
 
     costume = build_costume(body, arm, spec, BAKE_DIR)
     garment_objects = [c for c in costume if c is not None]
@@ -209,8 +220,8 @@ def setup_render():
     scene.cycles.device = "CPU"
     scene.cycles.samples = 12 if fast else SAMPLES
     scene.cycles.use_denoising = True
-    scene.render.resolution_x = 480 if fast else RES_X
-    scene.render.resolution_y = 270 if fast else RES_Y
+    scene.render.resolution_x = 640 if fast else RES_X
+    scene.render.resolution_y = 360 if fast else RES_Y
     scene.render.resolution_percentage = 100
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "Filmic"
@@ -222,16 +233,20 @@ def setup_render():
 def dump_scene():
     """Prints what the render is actually going to see."""
     scene = bpy.context.scene
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    bpy.context.view_layer.update()
     print("  camera:", scene.camera.name if scene.camera else None)
     if scene.camera:
+        cam_eval = scene.camera.evaluated_get(depsgraph)
         print("  camera loc:", tuple(round(v, 3) for v in
-                                     scene.camera.matrix_world.translation))
+                                     cam_eval.matrix_world.translation))
         print("  camera rot:", tuple(round(v, 3) for v in
-                                     scene.camera.matrix_world.to_euler()))
+                                     cam_eval.matrix_world.to_euler()))
     for obj in scene.objects:
         if obj.type != "MESH":
             continue
-        points = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+        evaluated = obj.evaluated_get(depsgraph)
+        points = [evaluated.matrix_world @ Vector(c) for c in evaluated.bound_box]
         lo = [round(min(p[i] for p in points), 2) for i in range(3)]
         hi = [round(max(p[i] for p in points), 2) for i in range(3)]
         print("  mesh %-16s hide_render=%s lo=%s hi=%s" % (
@@ -250,8 +265,17 @@ def shoot_fighter(fighter_id, spec, arena):
     build_arena(arena)
     setup_render()
     # The match camera looks at the midpoint of the two fighters, so a solo
-    # shot sits a little closer than the two-fighter framing.
-    build_camera((0.85, 1.95, 4.35), (0.0, 0.98, 0.0))
+    # shot sits a little closer than the two-fighter framing.  The values
+    # are (width, depth, height) to match the game's camera rig.
+    cam = os.environ.get("BLOODLINE_CAM", "")
+    if cam:
+        loc_part, _, tgt_part = cam.partition("|")
+        loc = tuple(float(v) for v in loc_part.split(","))
+        tgt = tuple(float(v) for v in tgt_part.split(","))
+    else:
+        loc = (0.85, 4.35, 1.95)
+        tgt = (0.0, 0.0, 0.98)
+    build_camera(loc, tgt)
     os.makedirs(OUT_DIR, exist_ok=True)
     dump_scene()
     render_to(os.path.join(OUT_DIR, fighter_id + ".png"))
@@ -278,8 +302,8 @@ def shoot_roster(arena):
 
     # Frame the line-up.
     width = len(order) * spacing
-    distance = max(10.0, width * 1.45)
-    build_camera((0.0, 3.4, distance), (0.0, 1.0, 0.0))
+    distance = max(11.0, width * 1.45)
+    build_camera((0.0, distance, 3.4), (0.0, 0.0, 1.0))
     os.makedirs(OUT_DIR, exist_ok=True)
     render_to(os.path.join(OUT_DIR, "roster.png"))
 

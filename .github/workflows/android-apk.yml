@@ -145,27 +145,26 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euo pipefail
-          mkdir -p Game/build
+          # Godot resolves the output path relative to the project directory,
+          # so the export is run from inside Game/ and the path is relative.
+          cd Game
+          mkdir -p build
           echo "== Godot version =="
           ~/godot/godot --version
           echo "== Export templates =="
-          ls -la "$HOME/.local/share/godot/export_templates/" || true
           ls -la "$HOME/.local/share/godot/export_templates/4.7.2.stable/" | head -30 || true
           echo "== Android SDK =="
           echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
-          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
           echo "JAVA_HOME=${JAVA_HOME:-unset}"
           ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/build-tools" 2>/dev/null || true
           ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/platforms" 2>/dev/null || true
-          echo "== Editor settings =="
-          cat "$HOME/.config/godot/editor_settings-4.7.tres" || true
           echo "== Export =="
           set +e
-          ~/godot/godot --headless --path Game --export-debug "Android" Game/build/bloodline-debug.apk 2>&1 | tee Game/build/export.log
+          ~/godot/godot --headless --export-debug "Android" build/bloodline-debug.apk 2>&1 | tee build/export.log
           code=${PIPESTATUS[0]}
           set -e
           echo "== godot exit code: $code =="
-          ls -la Game/build || true
+          ls -la build || true
           exit $code
 
       - name: Upload the APK
