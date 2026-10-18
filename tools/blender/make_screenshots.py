@@ -6,11 +6,10 @@ Produces:
     Game/assets/screenshots/<id>.png   one 16:9 shot per fighter
     Game/assets/screenshots/roster.png  the whole roster lined up
 
-The shots are rendered from the same rig, the same body, the same costume
-bake and the same idle clip the game loads, inside a reconstruction of the
-arena built from Game/data/arenas.json, and framed with the same field of
-view the match camera uses.  What the player sees in the menu is therefore
-what the fighter actually looks like in the ring.
+The shots are rendered from the exported game models themselves, inside a
+reconstruction of the arena built from Game/data/arenas.json, and framed
+with the same field of view the match camera uses.  What the player sees in
+the menu is therefore exactly what the fighter looks like in the ring.
 
 Axes: Blender is Z-up, the game is Y-up.  The game calls the arena width X,
 the arena depth Z and the height Y; here the same numbers are used with the
@@ -26,16 +25,10 @@ import bpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-
-import bloodline_anim as anim  # noqa: E402
-import bloodline_rig as rig  # noqa: E402
-from generate_fighters import FIGHTERS, build_costume  # noqa: E402
-
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+CHAR_DIR = os.path.join(ROOT, "Game", "assets", "characters")
 OUT_DIR = os.path.join(ROOT, "Game", "assets", "screenshots")
 ARENA_PATH = os.path.join(ROOT, "Game", "data", "arenas.json")
-BAKE_DIR = os.environ.get("BLOODLINE_BAKE", "/tmp/bloodline_bake")
 
 RES_X = 1280
 RES_Y = 720
@@ -171,46 +164,30 @@ def build_camera(location, target):
     return cam
 
 
-def build_fighter(spec, reset=True, skin_body=True):
-    """Builds the fighter and leaves the rig on the idle clip."""
-    if reset:
-        bpy.ops.wm.read_factory_settings(use_empty=True)
-    arm = rig.build_armature("Rig")
-    body = rig.build_body(arm, spec["proportions"], name="Body")
+def import_fighter(fighter_id):
+    """Imports the exported game model and poses it on the idle clip."""
+    path = os.path.join(CHAR_DIR, fighter_id + ".glb")
+    before = set(bpy.context.scene.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    new_objects = [o for o in bpy.context.scene.objects if o not in before]
 
-    if skin_body:
-        arm_mod = body.modifiers.new("Armature", "ARMATURE")
-        arm_mod.object = arm
-        body.parent = arm
-        body.matrix_parent_inverse = arm.matrix_world.inverted()
+    rig_object = None
+    for obj in new_objects:
+        if obj.type == "ARMATURE":
+            rig_object = obj
+        elif obj.type == "MESH" and obj.name.startswith("Icosphere"):
+            # A helper the importer leaves behind; it is not part of the
+            # game model.
+            bpy.data.objects.remove(obj, do_unlink=True)
 
-    costume = build_costume(body, arm, spec, BAKE_DIR)
-    garment_objects = [c for c in costume if c is not None]
-    if garment_objects:
-        bpy.ops.object.select_all(action="DESELECT")
-        for obj in garment_objects:
-            obj.select_set(True)
-        bpy.context.view_layer.objects.active = garment_objects[0]
-        bpy.ops.object.join()
-        gear = bpy.context.active_object
-        gear.name = "Gear"
-        gear_arm = gear.modifiers.new("Armature", "ARMATURE")
-        gear_arm.object = arm
-        gear.parent = arm
-        gear.matrix_parent_inverse = arm.matrix_world.inverted()
-
-    # Every clip is authored on the rig.  The idle action is captured as it
-    # is created, because a second fighter in the same scene gets its own
-    # "idle.001" action.
-    idle = None
-    for clip in anim.ALL_CLIPS:
-        clip(arm)
-        action = arm.animation_data.action if arm.animation_data else None
-        if action is not None and action.name.startswith("idle"):
-            idle = action
-    if idle is not None:
-        arm.animation_data.action = idle
-    return arm
+    if rig_object is not None and rig_object.animation_data is not None:
+        idle = bpy.data.actions.get("idle")
+        if idle is not None:
+            rig_object.animation_data.action = idle
+            slots = getattr(idle, "slots", None)
+            if slots is not None and len(slots) > 0:
+                rig_object.animation_data.action_slot = slots[0]
+    return rig_object
 
 
 def setup_render():
@@ -226,6 +203,7 @@ def setup_render():
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "Filmic"
     scene.render.image_settings.file_format = "PNG"
+    # A settled point in the two-second idle loop.
     scene.frame_set(20)
     bpy.context.view_layer.update()
 
@@ -236,12 +214,6 @@ def dump_scene():
     depsgraph = bpy.context.evaluated_depsgraph_get()
     bpy.context.view_layer.update()
     print("  camera:", scene.camera.name if scene.camera else None)
-    if scene.camera:
-        cam_eval = scene.camera.evaluated_get(depsgraph)
-        print("  camera loc:", tuple(round(v, 3) for v in
-                                     cam_eval.matrix_world.translation))
-        print("  camera rot:", tuple(round(v, 3) for v in
-                                     cam_eval.matrix_world.to_euler()))
     for obj in scene.objects:
         if obj.type != "MESH":
             continue
@@ -249,8 +221,7 @@ def dump_scene():
         points = [evaluated.matrix_world @ Vector(c) for c in evaluated.bound_box]
         lo = [round(min(p[i] for p in points), 2) for i in range(3)]
         hi = [round(max(p[i] for p in points), 2) for i in range(3)]
-        print("  mesh %-16s hide_render=%s lo=%s hi=%s" % (
-            obj.name, obj.hide_render, lo, hi))
+        print("  mesh %-16s lo=%s hi=%s" % (obj.name, lo, hi))
 
 
 def render_to(path):
@@ -259,9 +230,10 @@ def render_to(path):
     print("    wrote %s" % path)
 
 
-def shoot_fighter(fighter_id, spec, arena):
+def shoot_fighter(fighter_id, arena):
     print("=== screenshot: %s ===" % fighter_id)
-    build_fighter(spec)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    import_fighter(fighter_id)
     build_arena(arena)
     setup_render()
     # The match camera looks at the midpoint of the two fighters, so a solo
@@ -273,26 +245,25 @@ def shoot_fighter(fighter_id, spec, arena):
         loc = tuple(float(v) for v in loc_part.split(","))
         tgt = tuple(float(v) for v in tgt_part.split(","))
     else:
-        loc = (0.85, 4.35, 1.95)
-        tgt = (0.0, 0.0, 0.98)
+        loc = (0.75, 4.1, 1.85)
+        tgt = (0.0, 0.0, 0.95)
     build_camera(loc, tgt)
     os.makedirs(OUT_DIR, exist_ok=True)
     dump_scene()
     render_to(os.path.join(OUT_DIR, fighter_id + ".png"))
 
 
-def shoot_roster(arena):
+def shoot_roster(order, arena):
     """The whole roster in one arena, for the README."""
     print("=== screenshot: roster ===")
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    order = list(FIGHTERS.keys())
-    spacing = 2.35
+    spacing = 2.45
     start = -(len(order) - 1) * spacing * 0.5
     for index, fighter_id in enumerate(order):
-        spec = FIGHTERS[fighter_id]
-        arm = build_fighter(spec, reset=False)
-        arm.location = (start + index * spacing, 0.0, 0.0)
+        rig_object = import_fighter(fighter_id)
+        if rig_object is not None:
+            rig_object.location = (start + index * spacing, 0.0, 0.0)
         print("    placed %s" % fighter_id)
 
     build_arena(arena)
@@ -302,25 +273,27 @@ def shoot_roster(arena):
 
     # Frame the line-up.
     width = len(order) * spacing
-    distance = max(11.0, width * 1.45)
-    build_camera((0.0, distance, 3.4), (0.0, 0.0, 1.0))
+    distance = max(11.0, width * 1.4)
+    build_camera((0.0, distance, 3.2), (0.0, 0.0, 1.0))
     os.makedirs(OUT_DIR, exist_ok=True)
     render_to(os.path.join(OUT_DIR, "roster.png"))
 
 
 def main():
-    os.makedirs(BAKE_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     arena = load_arena("circuit_pit")
 
+    order = ["unbound", "nyra", "dagan", "kael", "sable", "voss"]
+    order = [f for f in order if os.path.exists(os.path.join(CHAR_DIR, f + ".glb"))]
+
     only = os.environ.get("BLOODLINE_ONLY", "")
-    for fighter_id, spec in FIGHTERS.items():
+    for fighter_id in order:
         if only and fighter_id != only:
             continue
-        shoot_fighter(fighter_id, spec, arena)
+        shoot_fighter(fighter_id, arena)
 
     if not only:
-        shoot_roster(arena)
+        shoot_roster(order, arena)
 
 
 if __name__ == "__main__":
