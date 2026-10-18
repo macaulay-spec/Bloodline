@@ -1,0 +1,254 @@
+name: Android APK
+
+on:
+  push:
+    branches:
+      - arena/a8a1c307-bloodline
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  # The export templates directory is named after Godot's full version
+  # config string, which is "4.7.2.stable" - a dot, not a dash.
+  GODOT_RELEASE: "4.7.2-stable"
+  GODOT_VERSION_CONFIG: "4.7.2.stable"
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools build-tools;35.0.1 platforms;android-35 cmdline-tools;latest"
+
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager --list_installed || true
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_RELEASE }}
+
+      - name: Download Godot editor
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot
+          cd ~/godot
+          url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip"
+          echo "Downloading $url"
+          curl -fSL --retry 3 --retry-delay 5 -o godot.zip "$url"
+          unzip -q -o godot.zip
+          mv "Godot_v${GODOT_RELEASE}_linux.x86_64" godot
+          chmod +x godot
+          rm -f godot.zip
+          ./godot --version
+
+      - name: Download Godot export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          target="$HOME/.local/share/godot/export_templates/${GODOT_VERSION_CONFIG}"
+          mkdir -p "$target"
+          cd /tmp
+          # NOTE: the download FILE name uses a dash, the target DIRECTORY uses a dot.
+          url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          echo "Downloading $url"
+          curl -fSL --retry 3 --retry-delay 5 -o templates.tpz "$url"
+          unzip -q -o templates.tpz -d /tmp/templates
+          # The .tpz unpacks to a "templates" folder.
+          cp -r /tmp/templates/templates/. "$target"/
+          rm -rf /tmp/templates templates.tpz
+          echo "Template directory contents:"
+          ls "$target" | head -20
+          test -f "$target/android_debug.apk"
+          test -f "$target/android_release.apk"
+
+      - name: Create the debug keystore
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+              -keypass android -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+              -validity 9999 -deststoretype pkcs12
+          fi
+          ls -la "$HOME/.android/debug.keystore"
+
+      - name: Configure Godot editor settings
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/godot"
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}"
+          java_home="${JAVA_HOME:-/usr/lib/jvm/temurin-17-jdk-amd64}"
+          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$sdk"
+          export/android/java_sdk_path = "$java_home"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          filesystem/import/blender/enabled = false
+          network/connection/engine_version_update_mode = 0
+          EOF
+          echo "Editor settings written:"
+          cat "$HOME/.config/godot/editor_settings-4.7.tres"
+
+      - name: Install Python tools
+        run: python3 -m pip install --upgrade pip && python3 -m pip install "gdtoolkit==4.5.0"
+
+      - name: Lint GDScript
+        run: |
+          set -euo pipefail
+          cd Game
+          gdlint scripts tools
+
+      - name: Import the project
+        run: |
+          set -euo pipefail
+          ~/godot/godot --headless --path Game --import
+
+      - name: Export the debug APK
+        run: |
+          set -euo pipefail
+          # The env context is not available in a step's env block, so the
+          # keystore variables are exported here, where $HOME is the real
+          # home of the runner.
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
+          # Godot resolves the output path relative to the project directory,
+          # so the export is run from inside Game/ and the path is relative.
+          cd Game
+          mkdir -p build
+          echo "== Keystore check =="
+          echo "path: $GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
+          keytool -list -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" \
+            -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
+            -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" 2>&1 | head -12 || true
+          echo "== Godot version =="
+          ~/godot/godot --version
+          echo "== Export templates =="
+          ls -la "$HOME/.local/share/godot/export_templates/4.7.2.stable/" | head -30 || true
+          echo "== Android SDK =="
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+          echo "JAVA_HOME=${JAVA_HOME:-unset}"
+          ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/build-tools" 2>/dev/null || true
+          ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/platforms" 2>/dev/null || true
+          echo "== Export =="
+          set +e
+          ~/godot/godot --headless --export-debug "Android" build/bloodline-debug.apk 2>&1 | tee build/export.log
+          code=${PIPESTATUS[0]}
+          set -e
+          echo "== godot exit code: $code =="
+          ls -la build || true
+          {
+            echo "== APK contents =="
+            ls -la build/bloodline-debug.apk || true
+            unzip -l build/bloodline-debug.apk | head -25 || true
+            echo "== packed game assets =="
+            unzip -l build/bloodline-debug.apk | grep -E "screenshots|characters|portraits" || true
+            echo "== total entries =="
+            unzip -l build/bloodline-debug.apk | tail -2 || true
+          } 2>&1 | tee -a build/export.log
+          exit $code
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bloodline-debug-apk
+          path: Game/build/bloodline-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload the build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            Game/build/
+            ~/.config/godot/editor_settings-4.7.tres
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # The build-log artifact is not readable from every network, so the
+      # diagnostics are also published to a branch that the API can reach.
+      # Builds every screen, runs a whole match with the AI driving one of
+      # the fighters and checks the save system, without a display. It runs
+      # after the export, so a failure here never withholds the APK.
+      - name: Smoke test the game
+        run: |
+          set -uo pipefail
+          cd Game
+          mkdir -p build
+          stdbuf -oL -eL timeout --signal=KILL 240 ~/godot/godot --headless --path . res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
+          code=${PIPESTATUS[0]}
+          echo "== smoke exit code: $code =="
+          if grep -q "SCRIPT ERROR" build/smoke.log; then
+            echo "::error::the smoke test produced script errors"
+            exit 1
+          fi
+          if ! grep -q "smoke: PASSED" build/smoke.log; then
+            echo "::error::the smoke test did not finish"
+            exit 1
+          fi
+          exit $code
+
+      - name: Publish build diagnostics
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          work="$RUNNER_TEMP/diagnostics"
+          rm -rf "$work"
+          mkdir -p "$work"
+          cp -f Game/build/export.log "$work/export.log" 2>/dev/null || true
+          cp -f Game/build/smoke.log "$work/smoke.log" 2>/dev/null || true
+          cp -f Game/export_presets.cfg "$work/export_presets.cfg" 2>/dev/null || true
+          cp -f "$HOME/.config/godot/editor_settings-4.7.tres" "$work/editor_settings-4.7.tres" 2>/dev/null || true
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "commit: ${{ github.sha }}"
+            echo "attempt: ${{ github.run_attempt }}"
+          } > "$work/run.txt"
+          cd "$work"
+          git init -q .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "CI diagnostics for run ${{ github.run_id }}"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/ci-diagnostics
+          echo "diagnostics published"

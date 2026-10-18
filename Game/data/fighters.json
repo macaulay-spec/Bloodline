@@ -1,0 +1,382 @@
+{
+  "unbound": {
+    "name": "The Unbound",
+    "title": "Veil Reinforcement",
+    "model": "res://assets/characters/unbound.glb",
+    "portrait": "res://assets/portraits/unbound.png",
+    "screenshot": "res://assets/screenshots/unbound.png",
+    "description": "A courier who tore the Veil open by accident and kept walking through it. Balanced, reliable, and dangerous when cornered.",
+    "style": "balanced",
+    "health": 1000.0,
+    "guard_max": 100.0,
+    "guard_recharge_per_second": 14.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 1.2,
+    "walk_speed": 2.9,
+    "back_speed": 2.2,
+    "height": 1.86,
+    "pushbox_radius": 0.45,
+    "hurtbox": {
+      "size": [
+        0.75,
+        0.65,
+        1.75
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        0.9
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Veil Reinforcement",
+    "unlock": {
+      "condition": "available",
+      "text": "Available from the start"
+    },
+    "in_roster": true,
+    "arenas": [
+      "circuit_pit",
+      "old_quarter",
+      "meridian_hall"
+    ],
+    "move_overrides": {}
+  },
+  "nyra": {
+    "name": "Nyra",
+    "title": "The Counter",
+    "model": "res://assets/characters/nyra.glb",
+    "portrait": "res://assets/portraits/nyra.png",
+    "screenshot": "res://assets/screenshots/nyra.png",
+    "description": "A courier's runner who turned her speed into a weapon. Punishes greedy approaches and punishes slow pokes.",
+    "style": "rushdown",
+    "health": 880.0,
+    "guard_max": 90.0,
+    "guard_recharge_per_second": 16.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 1.5,
+    "walk_speed": 3.5,
+    "back_speed": 2.7,
+    "height": 1.72,
+    "pushbox_radius": 0.4,
+    "hurtbox": {
+      "size": [
+        0.68,
+        0.6,
+        1.62
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        0.84
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Reflex Veil",
+    "unlock": {
+      "condition": "available",
+      "text": "Available from the start"
+    },
+    "in_roster": true,
+    "arenas": [
+      "circuit_pit",
+      "old_quarter",
+      "meridian_hall"
+    ],
+    "move_overrides": {
+      "light_attack": {
+        "startup": 5,
+        "recovery": 10,
+        "damage": 46,
+        "cancel_window": [
+          6,
+          17
+        ]
+      },
+      "heavy_attack": {
+        "startup": 12,
+        "damage": 96,
+        "cancel_window": [
+          13,
+          36
+        ]
+      },
+      "dodge": {
+        "distance": 3.9,
+        "cooldown": 36
+      }
+    }
+  },
+  "dagan": {
+    "name": "Dagan",
+    "title": "The Bulwark",
+    "model": "res://assets/characters/dagan.glb",
+    "portrait": "res://assets/portraits/dagan.png",
+    "screenshot": "res://assets/screenshots/dagan.png",
+    "description": "A Meridian Test Hall warden who wears a failed reinforcement as armour. Slow, heavy, and very hard to move.",
+    "style": "defender",
+    "health": 1250.0,
+    "guard_max": 140.0,
+    "guard_recharge_per_second": 10.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 0.9,
+    "walk_speed": 2.3,
+    "back_speed": 1.7,
+    "height": 2.04,
+    "pushbox_radius": 0.55,
+    "hurtbox": {
+      "size": [
+        0.92,
+        0.78,
+        1.95
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Meridian Reinforcement",
+    "unlock": {
+      "condition": "available",
+      "text": "Available from the start"
+    },
+    "in_roster": true,
+    "arenas": [
+      "circuit_pit",
+      "old_quarter",
+      "meridian_hall"
+    ],
+    "move_overrides": {
+      "light_attack": {
+        "damage": 62,
+        "startup": 8,
+        "recovery": 13
+      },
+      "heavy_attack": {
+        "damage": 128,
+        "startup": 16,
+        "recovery": 24
+      },
+      "ability": {
+        "damage": 150,
+        "meter_cost": 40,
+        "startup": 24
+      },
+      "dodge": {
+        "distance": 2.4,
+        "cooldown": 60
+      }
+    }
+  },
+  "kael": {
+    "name": "Kael",
+    "title": "The Forge",
+    "model": "res://assets/characters/kael.glb",
+    "portrait": "res://assets/portraits/kael.png",
+    "screenshot": "res://assets/screenshots/kael.png",
+    "description": "A Veil-smith who fights with heat he cannot put out. Builds pressure and punishes anyone who tries to breathe.",
+    "style": "pressure",
+    "health": 1050.0,
+    "guard_max": 105.0,
+    "guard_recharge_per_second": 12.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 1.4,
+    "walk_speed": 2.7,
+    "back_speed": 2.0,
+    "height": 1.9,
+    "pushbox_radius": 0.48,
+    "hurtbox": {
+      "size": [
+        0.8,
+        0.7,
+        1.82
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        0.93
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Overheat",
+    "unlock": {
+      "condition": "wins_2",
+      "text": "Win 2 matches"
+    },
+    "in_roster": true,
+    "arenas": [
+      "circuit_pit",
+      "old_quarter",
+      "meridian_hall"
+    ],
+    "move_overrides": {
+      "light_attack": {
+        "damage": 50,
+        "startup": 7
+      },
+      "heavy_attack": {
+        "damage": 118,
+        "startup": 15
+      },
+      "ability": {
+        "damage": 158,
+        "meter_cost": 55
+      }
+    }
+  },
+  "sable": {
+    "name": "Sable",
+    "title": "The Fold",
+    "model": "res://assets/characters/sable.glb",
+    "portrait": "res://assets/portraits/sable.png",
+    "screenshot": "res://assets/screenshots/sable.png",
+    "description": "Someone who walked into a Veil tear and came out wrong. Fights at odd distances, and does not fight where you expect.",
+    "style": "space",
+    "health": 960.0,
+    "guard_max": 95.0,
+    "guard_recharge_per_second": 13.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 1.6,
+    "walk_speed": 3.1,
+    "back_speed": 2.4,
+    "height": 1.8,
+    "pushbox_radius": 0.43,
+    "hurtbox": {
+      "size": [
+        0.72,
+        0.64,
+        1.7
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        0.88
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Distortion",
+    "unlock": {
+      "condition": "wins_5",
+      "text": "Win 5 matches"
+    },
+    "in_roster": true,
+    "arenas": [
+      "old_quarter",
+      "meridian_hall"
+    ],
+    "move_overrides": {
+      "light_attack": {
+        "damage": 52,
+        "startup": 6
+      },
+      "heavy_attack": {
+        "damage": 104,
+        "startup": 15
+      },
+      "ability": {
+        "damage": 138,
+        "meter_cost": 45,
+        "startup": 20
+      },
+      "dodge": {
+        "distance": 3.5
+      }
+    }
+  },
+  "voss": {
+    "name": "Voss",
+    "title": "The Warden",
+    "model": "res://assets/characters/voss.glb",
+    "portrait": "res://assets/portraits/voss.png",
+    "screenshot": "res://assets/screenshots/voss.png",
+    "description": "The Meridian Test Hall is not a test hall. Voss built it, and Voss decides who leaves. Arrives with the Veil campaign.",
+    "style": "boss",
+    "health": 1400.0,
+    "guard_max": 160.0,
+    "guard_recharge_per_second": 9.0,
+    "meter_max": 100.0,
+    "meter_gain_per_second": 0.8,
+    "walk_speed": 2.4,
+    "back_speed": 1.9,
+    "height": 2.1,
+    "pushbox_radius": 0.58,
+    "hurtbox": {
+      "size": [
+        0.98,
+        0.82,
+        2.0
+      ],
+      "offset": [
+        0.0,
+        0.0,
+        1.02
+      ]
+    },
+    "moves": [
+      "light_attack",
+      "heavy_attack",
+      "ability",
+      "dodge",
+      "block"
+    ],
+    "signature": "ability",
+    "signature_name": "Closure",
+    "unlock": {
+      "condition": "campaign_1",
+      "text": "Complete the Veil campaign"
+    },
+    "in_roster": false,
+    "arenas": [
+      "meridian_hall"
+    ],
+    "move_overrides": {
+      "light_attack": {
+        "damage": 66
+      },
+      "heavy_attack": {
+        "damage": 136
+      },
+      "ability": {
+        "damage": 168,
+        "meter_cost": 50
+      }
+    }
+  }
+}
