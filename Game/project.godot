@@ -21,6 +21,13 @@ SaveSystem="*res://scripts/core/SaveSystem.gd"
 AudioDirector="*res://scripts/core/AudioDirector.gd"
 SceneRouter="*res://scripts/core/SceneRouter.gd"
 
+[debug]
+
+; Godot 4.7 treats an inferred Variant type as an error, which stops the
+; build on a style problem. The project keeps the warning visible but does
+; not let it break the game.
+gdscript/warnings/inference_on_variant=1
+
 [display]
 
 window/size/viewport_width=1280

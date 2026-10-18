@@ -158,7 +158,7 @@ func _decide() -> void:
 
 	# A combo in progress takes priority.
 	if _combo_plan.size() > 0 and _combo_timer > 0:
-		var next_move := _combo_plan.pop_front()
+		var next_move: String = _combo_plan.pop_front()
 		_combo_timer -= 1
 		if _start(next_move):
 			_last_thought = "combo -> %s" % next_move

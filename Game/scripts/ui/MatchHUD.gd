@@ -1,3 +1,5 @@
+class_name MatchHUD
+
 extends Control
 ## The in-match heads-up display.
 ##

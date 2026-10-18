@@ -23,23 +23,26 @@ signal knocked_out
 ## Emitted when the fighter's meter changes.
 signal meter_changed(value: float, maximum: float)
 
-enum State {
-	IDLE,
-	WALK_FORWARD,
-	WALK_BACK,
-	STARTUP,
-	ACTIVE,
-	RECOVERY,
-	BLOCKING,
-	HITSTUN,
-	BLOCKSTUN,
-	GUARD_BREKEN,
-	KNOCKDOWN,
-	KNOCKED_OUT,
-	INTRO,
-	VICTORY,
-	DEFEAT,
-}
+## The states a fighter can be in.
+##
+## They are plain constants rather than an enum, so that every script can
+## read the state of a fighter without reaching into the class that owns
+## it. The fighter itself is the only place that changes them.
+const ST_IDLE := 0
+const ST_WALK_FORWARD := 1
+const ST_WALK_BACK := 2
+const ST_STARTUP := 3
+const ST_ACTIVE := 4
+const ST_RECOVERY := 5
+const ST_BLOCKING := 6
+const ST_HITSTUN := 7
+const ST_BLOCKSTUN := 8
+const ST_GUARD_BROKEN := 9
+const ST_KNOCKDOWN := 10
+const ST_KNOCKED_OUT := 11
+const ST_INTRO := 12
+const ST_VICTORY := 13
+const ST_DEFEAT := 14
 
 ## The fighter's data id.
 var fighter_id: String = ""
@@ -63,7 +66,7 @@ var guard: float = 100.0
 var meter: float = 0.0
 
 ## The current state.
-var state: int = State.IDLE
+var state: int = ST_IDLE
 
 ## The move currently being executed, as a data dictionary.
 var current_move: Dictionary = {}
@@ -167,7 +170,7 @@ func _build_model() -> void:
 		_current_anim = "idle"
 		# Loop every clip; the state machine decides when to switch.
 		for clip_name in _anim_player.get_animation_list():
-			var anim := _anim_player.get_animation(clip_name)
+			var anim: Animation = _anim_player.get_animation(clip_name)
 			if anim != null and not anim.loop_mode == Animation.LOOP_LINEAR:
 				anim.loop_mode = Animation.LOOP_LINEAR
 
@@ -176,7 +179,7 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:
 		return node
 	for child in node.get_children():
-		var found := _find_animation_player(child)
+		var found: AnimationPlayer = _find_animation_player(child)
 		if found != null:
 			return found
 	return null
@@ -278,13 +281,13 @@ func start_move(move_id: String) -> bool:
 
 	match String(move.get("kind", "normal")):
 		"movement":
-			state = State.WALK_FORWARD if move_id == "walk_forward" else State.WALK_BACK
+			state = ST_WALK_FORWARD if move_id == "walk_forward" else ST_WALK_BACK
 			_play_animation(String(move.get("animation", "idle")))
 		"defense":
-			state = State.BLOCKING
+			state = ST_BLOCKING
 			_play_animation(String(move.get("animation", "guard")))
 		_:
-			state = State.STARTUP
+			state = ST_STARTUP
 			_play_animation(String(move.get("animation", "idle")))
 	return true
 
@@ -294,17 +297,17 @@ func can_start_move(move_id: String) -> bool:
 	if (
 		state
 		in [
-			State.STARTUP,
-			State.ACTIVE,
-			State.RECOVERY,
-			State.HITSTUN,
-			State.BLOCKSTUN,
-			State.GUARD_BROKEN,
-			State.KNOCKDOWN,
-			State.KNOCKED_OUT,
-			State.INTRO,
-			State.VICTORY,
-			State.DEFEAT
+			ST_STARTUP,
+			ST_ACTIVE,
+			ST_RECOVERY,
+			ST_HITSTUN,
+			ST_BLOCKSTUN,
+			ST_GUARD_BROKEN,
+			ST_KNOCKDOWN,
+			ST_KNOCKED_OUT,
+			ST_INTRO,
+			ST_VICTORY,
+			ST_DEFEAT
 		]
 	):
 		return false
@@ -331,7 +334,7 @@ func take_buffered_input() -> String:
 	if buffered_input.is_empty() or buffered_input_frames <= 0:
 		buffered_input = ""
 		return ""
-	var action := buffered_input
+	var action: String = buffered_input
 	buffered_input = ""
 	buffered_input_frames = 0
 	return action
@@ -371,40 +374,40 @@ func _tick_meter(delta: float) -> void:
 
 func _tick_state(delta: float) -> void:
 	match state:
-		State.IDLE:
+		ST_IDLE:
 			_advance_from_idle()
-		State.WALK_FORWARD, State.WALK_BACK:
+		ST_WALK_FORWARD, ST_WALK_BACK:
 			_tick_walk(delta)
-		State.STARTUP:
+		ST_STARTUP:
 			_tick_startup()
-		State.ACTIVE:
+		ST_ACTIVE:
 			_tick_active(delta)
-		State.RECOVERY:
+		ST_RECOVERY:
 			_tick_recovery()
-		State.BLOCKING:
+		ST_BLOCKING:
 			_tick_blocking(delta)
-		State.HITSTUN:
+		ST_HITSTUN:
 			state_frames -= 1
 			if state_frames <= 0:
 				_set_idle()
-		State.BLOCKSTUN:
+		ST_BLOCKSTUN:
 			state_frames -= 1
 			if state_frames <= 0:
 				_set_idle()
-		State.GUARD_BROKEN:
+		ST_GUARD_BROKEN:
 			state_frames -= 1
 			if state_frames <= 0:
 				_set_idle()
-		State.KNOCKDOWN:
+		ST_KNOCKDOWN:
 			state_frames -= 1
 			if state_frames <= 0:
 				_set_idle()
-		State.KNOCKED_OUT, State.VICTORY, State.DEFEAT, State.INTRO:
+		ST_KNOCKED_OUT, ST_VICTORY, ST_DEFEAT, ST_INTRO:
 			pass
 
 
 func _advance_from_idle() -> void:
-	var action := take_buffered_input()
+	var action: String = take_buffered_input()
 	if action.is_empty():
 		return
 	if action == "forward" and start_move("walk_forward"):
@@ -413,7 +416,7 @@ func _advance_from_idle() -> void:
 		return
 	if action == "block":
 		guard_held = true
-		state = State.BLOCKING
+		state = ST_BLOCKING
 		_play_animation("guard")
 		return
 	if start_move(action):
@@ -428,13 +431,13 @@ func _tick_walk(_delta: float) -> void:
 	velocity.x = speed * facing
 	# Walking can be interrupted by a new input.
 	if not guard_held and _has_buffered_action():
-		var action := take_buffered_input()
+		var action: String = take_buffered_input()
 		if action == "forward" or action == "back":
 			if start_move("walk_forward" if action == "forward" else "walk_back"):
 				return
 		elif action == "block":
 			guard_held = true
-			state = State.BLOCKING
+			state = ST_BLOCKING
 			_play_animation("guard")
 			return
 		elif start_move(action):
@@ -452,7 +455,7 @@ func _tick_startup() -> void:
 	var startup := int(current_move.get("startup", 6))
 	if move_frame >= startup:
 		move_frame = 0
-		state = State.ACTIVE
+		state = ST_ACTIVE
 		_begin_active_window()
 
 
@@ -470,7 +473,7 @@ func _tick_active(_delta: float) -> void:
 	invulnerable = _frames_in_range(move_frame, current_move.get("invulnerable_frames", []))
 	_update_hitbox_visual()
 	if state_frames <= 0:
-		state = State.RECOVERY
+		state = ST_RECOVERY
 		state_frames = int(current_move.get("recovery", 12))
 		invulnerable = false
 		_update_hitbox_visual()
@@ -492,7 +495,7 @@ func _tick_blocking(delta: float) -> void:
 	var recharge := float(data.get("guard_recharge_per_second", 12.0))
 	guard = minf(max_guard, guard + recharge * delta)
 	if not guard_held:
-		state = State.IDLE
+		state = ST_IDLE
 		_play_animation("idle")
 		return
 	# A blocked attack is resolved by the match; the fighter stays up.
@@ -516,7 +519,7 @@ func _finish_move() -> void:
 
 
 func _set_idle() -> void:
-	state = State.IDLE
+	state = ST_IDLE
 	current_move = {}
 	current_move_id = ""
 	move_frame = 0
@@ -528,7 +531,7 @@ func _set_idle() -> void:
 
 ## Applies a hit from `source` using `move`. Returns the damage dealt.
 func receive_hit(source: Fighter, move: Dictionary, blocked: bool) -> float:
-	if state == State.KNOCKED_OUT or state == State.VICTORY or state == State.DEFEAT:
+	if state == ST_KNOCKED_OUT or state == ST_VICTORY or state == ST_DEFEAT:
 		return 0.0
 	if invulnerable:
 		return 0.0
@@ -537,14 +540,14 @@ func receive_hit(source: Fighter, move: Dictionary, blocked: bool) -> float:
 	if blocked:
 		damage = float(move.get("chip_damage", 0.0))
 		guard = maxf(0.0, guard - float(move.get("guard_damage", 0.0)))
-		state = State.BLOCKSTUN
+		state = ST_BLOCKSTUN
 		state_frames = int(move.get("blockstun", 9))
 		_play_animation("block")
 		if guard <= 0.0:
 			_break_guard()
 	else:
 		health = maxf(0.0, health - damage)
-		state = State.HITSTUN
+		state = ST_HITSTUN
 		state_frames = int(move.get("hitstun", 16))
 		_play_animation("hit")
 		# Meter fills from taking damage, so being hit is a resource.
@@ -559,7 +562,7 @@ func receive_hit(source: Fighter, move: Dictionary, blocked: bool) -> float:
 
 
 func _break_guard() -> void:
-	state = State.GUARD_BROKEN
+	state = ST_GUARD_BROKEN
 	state_frames = CombatConstants.GUARD_BREAK_FRAMES
 	guard = CombatConstants.GUARD_BREAK_PENALTY
 	_play_animation("hit")
@@ -567,7 +570,7 @@ func _break_guard() -> void:
 
 
 func _knock_out() -> void:
-	state = State.KNOCKED_OUT
+	state = ST_KNOCKED_OUT
 	health = 0.0
 	_play_animation("knockdown")
 	knocked_out.emit()
@@ -654,7 +657,7 @@ func _frames_in_range(frame: int, range_array: Variant) -> bool:
 func _update_hitbox_visual() -> void:
 	if _hitbox_mesh == null:
 		return
-	var active := state == State.ACTIVE
+	var active := state == ST_ACTIVE
 	_hitbox_mesh.visible = active
 	if not active:
 		return
@@ -687,90 +690,90 @@ func debug_state() -> String:
 
 ## True while the fighter is standing still.
 func is_idle() -> bool:
-	return state == State.IDLE
+	return state == ST_IDLE
 
 
 ## True while the fighter is walking in either direction.
 func is_walking() -> bool:
-	return state == State.WALK_FORWARD or state == State.WALK_BACK
+	return state == ST_WALK_FORWARD or state == ST_WALK_BACK
 
 
 ## True while the fighter walks towards the opponent.
 func is_walking_forward() -> bool:
-	return state == State.WALK_FORWARD
+	return state == ST_WALK_FORWARD
 
 
 ## True while the fighter walks away from the opponent.
 func is_walking_back() -> bool:
-	return state == State.WALK_BACK
+	return state == ST_WALK_BACK
 
 
 ## True while the fighter winds up an attack.
 func is_startup() -> bool:
-	return state == State.STARTUP
+	return state == ST_STARTUP
 
 
 ## True while the attack of the fighter is live.
 func is_active() -> bool:
-	return state == State.ACTIVE
+	return state == ST_ACTIVE
 
 
 ## True while the fighter recovers from an attack.
 func is_recovery() -> bool:
-	return state == State.RECOVERY
+	return state == ST_RECOVERY
 
 
 ## True while the fighter holds the guard.
 func is_blocking() -> bool:
-	return state == State.BLOCKING
+	return state == ST_BLOCKING
 
 
 ## True while the guard of the fighter is broken.
 func is_guard_broken() -> bool:
-	return state == State.GUARD_BROKEN
+	return state == ST_GUARD_BROKEN
 
 
 ## True while the fighter is on the floor.
 func is_knocked_down() -> bool:
-	return state == State.KNOCKDOWN
+	return state == ST_KNOCKDOWN
 
 
 ## True while the fighter is out of the round.
 func is_knocked_out() -> bool:
-	return state == State.KNOCKED_OUT
+	return state == ST_KNOCKED_OUT
 
 
 ## True while the round intro is still playing.
 func is_intro() -> bool:
-	return state == State.INTRO
+	return state == ST_INTRO
 
 
 ## True once the match is over for the fighter.
 func is_finished() -> bool:
-	return state == State.VICTORY or state == State.DEFEAT
+	return state == ST_VICTORY or state == ST_DEFEAT
 
 
 ## True when the fighter won the match.
 func is_victory() -> bool:
-	return state == State.VICTORY
+	return state == ST_VICTORY
 
 
 ## True when the fighter lost the match.
 func is_defeat() -> bool:
-	return state == State.DEFEAT
+	return state == ST_DEFEAT
 
 
 ## Puts the fighter into the round intro.
 func enter_intro() -> void:
-	state = State.INTRO
+	state = ST_INTRO
 
 
 ## Puts the fighter back to a neutral stance.
 func enter_idle() -> void:
-	state = State.IDLE
+	state = ST_IDLE
 
 
 ## Ends the match for the fighter.
 func enter_result(won: bool) -> void:
-	state = State.VICTORY if won else State.DEFEAT
+	state = ST_VICTORY if won else ST_DEFEAT
 

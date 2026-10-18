@@ -63,7 +63,7 @@ func play_sound(sound_id: String, volume_scale: float = 1.0) -> void:
 	_last_sound_frame[sound_id] = frame
 
 	var stream: AudioStream = _sounds[sound_id]
-	var player := _sfx_players[_next_player]
+	var player: AudioStreamPlayer = _sfx_players[_next_player]
 	_next_player = (_next_player + 1) % _sfx_players.size()
 	player.stream = stream
 	player.volume_db = linear_to_db(

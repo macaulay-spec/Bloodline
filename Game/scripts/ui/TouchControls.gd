@@ -1,3 +1,5 @@
+class_name TouchControls
+
 extends Control
 ## The on-screen controls.
 ##
@@ -64,12 +66,12 @@ func _build() -> void:
 	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(left)
 
-	var back_button := _make_button(
+	var back_button: Button = _make_button(
 		"◀ Back", BloodlineTheme.TEXT_DIM, Vector2(92, 60), func() -> void: _on_move(-1)
 	)
 	left.add_child(back_button)
 
-	var forward_button := _make_button(
+	var forward_button: Button = _make_button(
 		"Forward ▶", BloodlineTheme.TEXT_DIM, Vector2(92, 60), func() -> void: _on_move(1)
 	)
 	left.add_child(forward_button)

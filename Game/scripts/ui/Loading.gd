@@ -62,14 +62,14 @@ func _prepare() -> void:
 	steps.append(String(SceneRouter.context.get("enemy_id", "dagan")))
 
 	for i in range(steps.size()):
-		var fighter_id := steps[i]
+		var fighter_id: String = steps[i]
 		_status.text = "Loading %s…" % ContentDB.fighter_name(fighter_id)
 		var fighter := ContentDB.get_fighter(fighter_id)
 		var model_path := String(fighter.get("model", ""))
 		if not model_path.is_empty() and ResourceLoader.exists(model_path):
 			var packed: PackedScene = load(model_path)
 			if packed != null:
-				var instance := packed.instantiate()
+				var instance: Node = packed.instantiate()
 				instance.queue_free()
 		_progress.value = float(i + 1) / float(steps.size() + 1)
 		# Yield so the screen actually paints between steps.
