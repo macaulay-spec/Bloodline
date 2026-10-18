@@ -264,7 +264,7 @@ def shoot_roster(order, arena):
     print("=== screenshot: roster ===")
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    spacing = 2.45
+    spacing = 1.40
     start = -(len(order) - 1) * spacing * 0.5
     for index, fighter_id in enumerate(order):
         rig_object = import_fighter(fighter_id, os.environ.get("BLOODLINE_ACTION", "guard"))
@@ -277,10 +277,12 @@ def shoot_roster(order, arena):
     bpy.context.scene.frame_set(int(os.environ.get("BLOODLINE_FRAME", "18")))
     bpy.context.view_layer.update()
 
-    # Frame the line-up.
-    width = len(order) * spacing
-    distance = max(11.0, width * 1.4)
-    build_camera((0.0, distance, 3.2), (0.0, 0.0, 1.0))
+    # Frame the line-up. The camera has a 48 degree vertical field of
+    # view, so it only has to stand far enough back to see the ends of
+    # the line.
+    width = (len(order) - 1) * spacing + 0.8
+    distance = max(6.0, width * 1.15)
+    build_camera((0.0, distance, 1.45), (0.0, 0.0, 0.95))
     os.makedirs(OUT_DIR, exist_ok=True)
     render_to(os.path.join(OUT_DIR, "roster.png"))
 
@@ -293,12 +295,15 @@ def main():
     order = [f for f in order if os.path.exists(os.path.join(CHAR_DIR, f + ".glb"))]
 
     only = os.environ.get("BLOODLINE_ONLY", "")
+    roster_only = os.environ.get("BLOODLINE_ROSTER", "") == "1"
     for fighter_id in order:
+        if roster_only:
+            break
         if only and fighter_id != only:
             continue
         shoot_fighter(fighter_id, arena)
 
-    if not only:
+    if not only or roster_only:
         shoot_roster(order, arena)
 
 

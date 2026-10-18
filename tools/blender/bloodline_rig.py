@@ -95,8 +95,15 @@ def _torso_sections(height, bulk, torso):
     ]
 
 
-def build_armature(name="Rig"):
-    """Create the shared armature and return the object."""
+def build_armature(name="Rig", height=1.0, bulk=1.0):
+    """Create the shared armature and return the object.
+
+    The bones are written for a fighter of average build, so they are
+    scaled to the proportions of the fighter: the height stretches the
+    skeleton along the spine and the bulk widens it. The body mesh is
+    built from the same proportions, so the two always agree and the
+    head never floats away from the neck.
+    """
     arm_data = bpy.data.armatures.new(name)
     arm = bpy.data.objects.new(name, arm_data)
     bpy.context.scene.collection.objects.link(arm)
@@ -104,8 +111,8 @@ def build_armature(name="Rig"):
     bpy.ops.object.mode_set(mode="EDIT")
     for bname, head, tail, parent in BONES:
         eb = arm_data.edit_bones.new(bname)
-        eb.head = head
-        eb.tail = tail
+        eb.head = (head[0] * bulk, head[1] * bulk, head[2] * height)
+        eb.tail = (tail[0] * bulk, tail[1] * bulk, tail[2] * height)
         if parent:
             eb.parent = arm_data.edit_bones[parent]
     bpy.ops.object.mode_set(mode="OBJECT")

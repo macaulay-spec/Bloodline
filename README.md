@@ -23,7 +23,9 @@ sideload it over ADB with `adb install bloodline-debug.apk`).
 
 The build workflow lives at
 [`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml) and
-runs on every push to the branch and on every pull request.
+runs on every push to the branch and on every pull request. It lints the
+GDScript, imports the project, exports the APK, uploads it as the
+`bloodline-debug-apk` artifact, and then runs the headless smoke test.
 
 ---
 
@@ -156,6 +158,9 @@ Game/                       Godot project root
     portraits/*.png         fighter select portraits, rendered from the same rig
     screenshots/*.png       the fighter standing in the arena, used in the menus and the README
     preview/*.png           turnaround renders used for art review
+  tools/
+    smoke_test.gd           headless test: every screen, a whole match, the save
+    smoke_test.tscn         the scene that runs it
 
 tools/
   blender/                  the asset pipeline
@@ -215,13 +220,22 @@ These are not negotiable and are enforced by the design:
 ```bash
 # Lint and format the GDScript.
 pip install gdtoolkit==4.5.0
-gdlint Game/scripts
-gdformat Game/scripts
+cd Game && gdlint scripts tools && gdformat scripts tools
 
 # Import the project and export a debug APK locally.
 godot --headless --path Game --import
 cd Game && godot --headless --export-debug "Android" build/bloodline-debug.apk
+
+# Run the headless smoke test: every screen, a whole AI match, the save.
+cd Game && godot --headless --path . res://tools/smoke_test.tscn
 ```
+
+The smoke test builds all eleven screens, runs a 600 frame match with the
+AI driving the opponent, checks that the AI actually lands hits and that
+a match can only be credited once. It prints `smoke: PASSED` at the end.
+The CI workflow runs it on every build and fails the build if it does not
+pass or if any script logs an error, so a broken screen can never reach
+the APK.
 
 The Android export needs JDK 17, the Android SDK (platform-tools,
 build-tools 35.0.1, platforms android-35) and the Godot 4.7.2 export

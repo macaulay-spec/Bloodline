@@ -249,7 +249,9 @@ def build_fighter(fighter_id, spec):
     print("=== building fighter: %s ===" % fighter_id)
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    arm = rig.build_armature("Rig")
+    arm = rig.build_armature(
+        "Rig", height=spec["proportions"]["height"], bulk=spec["proportions"]["bulk"]
+    )
     body = rig.build_body(arm, spec["proportions"], name="Body")
 
     # Bind the body to the rig. Without a live Armature modifier the glTF
