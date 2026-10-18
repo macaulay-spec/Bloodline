@@ -131,12 +131,32 @@ jobs:
         run: |
           set -euo pipefail
           cd Game
-          gdlint scripts
+          gdlint scripts tools
 
       - name: Import the project
         run: |
           set -euo pipefail
           ~/godot/godot --headless --path Game --import
+
+      # Builds every screen, runs a whole match with the AI driving one of
+      # the fighters and checks the save system, without a display.
+      - name: Smoke test the game
+        run: |
+          set -uo pipefail
+          cd Game
+          mkdir -p build
+          ~/godot/godot --headless --path Game res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
+          code=${PIPESTATUS[0]}
+          echo "== smoke exit code: $code =="
+          if grep -q "SCRIPT ERROR" build/smoke.log; then
+            echo "::error::the smoke test produced script errors"
+            exit 1
+          fi
+          if ! grep -q "smoke: PASSED" build/smoke.log; then
+            echo "::error::the smoke test did not finish"
+            exit 1
+          fi
+          exit $code
 
       - name: Export the debug APK
         run: |
@@ -196,7 +216,7 @@ jobs:
       # The build-log artifact is not readable from every network, so the
       # diagnostics are also published to a branch that the API can reach.
       - name: Publish build diagnostics
-        if: failure()
+        if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -205,6 +225,7 @@ jobs:
           rm -rf "$work"
           mkdir -p "$work"
           cp -f Game/build/export.log "$work/export.log" 2>/dev/null || true
+          cp -f Game/build/smoke.log "$work/smoke.log" 2>/dev/null || true
           cp -f Game/export_presets.cfg "$work/export_presets.cfg" 2>/dev/null || true
           cp -f "$HOME/.config/godot/editor_settings-4.7.tres" "$work/editor_settings-4.7.tres" 2>/dev/null || true
           {
