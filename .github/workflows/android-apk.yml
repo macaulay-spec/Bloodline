@@ -172,13 +172,15 @@ jobs:
           set -e
           echo "== godot exit code: $code =="
           ls -la build || true
-          echo "== APK contents =="
-          ls -la build/bloodline-debug.apk || true
-          unzip -l build/bloodline-debug.apk | head -30 || true
-          echo "== packed assets =="
-          unzip -l build/bloodline-debug.apk | grep -E "screenshots|characters|portraits" || true
-          echo "== total entries =="
-          unzip -l build/bloodline-debug.apk | tail -2 || true
+          {
+            echo "== APK contents =="
+            ls -la build/bloodline-debug.apk || true
+            unzip -l build/bloodline-debug.apk | head -25 || true
+            echo "== packed game assets =="
+            unzip -l build/bloodline-debug.apk | grep -E "screenshots|characters|portraits" || true
+            echo "== total entries =="
+            unzip -l build/bloodline-debug.apk | tail -2 || true
+          } 2>&1 | tee -a build/export.log
           exit $code
 
       - name: Upload the APK
