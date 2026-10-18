@@ -28,6 +28,10 @@ const SCREENS := [
 ## The frames each screen is left in the tree before it is torn down.
 const SCREEN_FRAMES := 4
 
+## The match id the save test uses. It is far above any timestamp the game
+## can produce, so the test always starts from an unclaimed match.
+const TEST_MATCH_ID := 99999999999
+
 ## How many simulated frames the match is run for.
 const MATCH_FRAMES := 600
 
@@ -121,17 +125,22 @@ func _step_match() -> void:
 	_match.simulate(1.0 / 60.0)
 	_match_frames += 1
 
-	if _match_frames == 120:
-		_damage_seen = _match.damage_taken("dagan")
-		print("smoke: match running, damage to dagan %.1f" % _damage_seen)
-
 	if _match_frames >= MATCH_FRAMES:
+		_damage_seen = _match.damage_taken("dagan")
+		var damage_to_player := _match.damage_taken("unbound")
+		var combos := _match.combo_count("dagan")
 		print(
 			(
-				"smoke: match ran %d frames, winner=%s, damage=%.1f"
-				% [_match_frames, _match.round_winner, _damage_seen]
+				"smoke: match ran %d frames, winner='%s', damage to dagan %.1f, to the player %.1f, combo %d"
+				% [_match_frames, _match.round_winner, _damage_seen, damage_to_player, combos]
 			)
 		)
+		print("smoke: the ai says: %s" % _match.ai_debug())
+		# The player never presses a button, so the AI has to close the
+		# distance and land the first hits on its own.
+		if damage_to_player <= 0.0:
+			_failures += 1
+			push_error("smoke: the ai did not land a single hit in %d frames" % MATCH_FRAMES)
 		_match.queue_free()
 		_match = null
 		_phase = "save"
@@ -141,18 +150,21 @@ func _step_match() -> void:
 
 
 func _step_save() -> void:
-	var result: Dictionary = SaveSystem.record_match(900001, "unbound", "dagan", true, 2)
+	var result: Dictionary = SaveSystem.record_match(TEST_MATCH_ID, "unbound", "dagan", true, 2)
 	print("smoke: record_match -> %s" % result)
 	if not bool(result.get("ok", false)):
 		_failures += 1
 		push_error("smoke: record_match failed: %s" % result)
 
 	# The same match id must never be credited twice.
-	var second: Dictionary = SaveSystem.record_match(900001, "unbound", "dagan", true, 2)
+	var second: Dictionary = SaveSystem.record_match(TEST_MATCH_ID, "unbound", "dagan", true, 2)
 	print("smoke: record_match again -> %s" % second)
 	if bool(second.get("ok", false)):
 		_failures += 1
 		push_error("smoke: record_match was not idempotent: %s" % second)
+	elif String(second.get("reason", "")) != "already_claimed":
+		_failures += 1
+		push_error("smoke: the second claim failed for the wrong reason: %s" % second)
 
 	_phase = "done"
 
