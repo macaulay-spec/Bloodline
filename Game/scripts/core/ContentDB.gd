@@ -122,6 +122,16 @@ func fighter_name(fighter_id: String) -> String:
 	return String(fighter.get("name", fighter_id.to_upper()))
 
 
+## The path of a fighter's in-game screenshot, or an empty string.
+func fighter_screenshot(fighter_id: String) -> String:
+	return String(get_fighter(fighter_id).get("screenshot", ""))
+
+
+## The path of a fighter's portrait, or an empty string.
+func fighter_portrait(fighter_id: String) -> String:
+	return String(get_fighter(fighter_id).get("portrait", ""))
+
+
 ## Human readable move name, falling back to the id.
 func move_name(move_id: String) -> String:
 	var move := get_move(move_id)

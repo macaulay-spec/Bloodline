@@ -92,14 +92,17 @@ func _populate_detail() -> void:
 	if fighter.is_empty():
 		return
 
-	var portrait := TextureRect.new()
-	portrait.custom_minimum_size = Vector2(220, 240)
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	var path := String(fighter.get("portrait", ""))
-	if not path.is_empty() and ResourceLoader.exists(path):
-		portrait.texture = load(path)
-	_detail.add_child(portrait)
+	# The fighter as they appear in the ring, with the portrait underneath.
+	var shot := TextureRect.new()
+	shot.custom_minimum_size = Vector2(360, 203)
+	shot.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shot.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	var shot_path := ContentDB.fighter_screenshot(_selected_id)
+	if shot_path.is_empty() or not ResourceLoader.exists(shot_path):
+		shot_path = ContentDB.fighter_portrait(_selected_id)
+	if not shot_path.is_empty() and ResourceLoader.exists(shot_path):
+		shot.texture = load(shot_path)
+	_detail.add_child(shot)
 
 	_detail.add_child(BloodlineTheme.title(ContentDB.fighter_name(_selected_id), 28))
 	_detail.add_child(BloodlineTheme.body(String(fighter.get("title", "")), 16))

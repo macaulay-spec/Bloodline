@@ -32,7 +32,7 @@ ARENA_PATH = os.path.join(ROOT, "Game", "data", "arenas.json")
 
 RES_X = 1280
 RES_Y = 720
-SAMPLES = 96
+SAMPLES = 64
 
 # Game/scripts/combat/CameraRig.gd: 48 degrees of vertical field of view.
 GODOT_FOV = 48.0
@@ -164,8 +164,8 @@ def build_camera(location, target):
     return cam
 
 
-def import_fighter(fighter_id):
-    """Imports the exported game model and poses it on the idle clip."""
+def import_fighter(fighter_id, action_name="guard"):
+    """Imports the exported game model and poses it on a clip from the game."""
     path = os.path.join(CHAR_DIR, fighter_id + ".glb")
     before = set(bpy.context.scene.objects)
     bpy.ops.import_scene.gltf(filepath=path)
@@ -181,10 +181,10 @@ def import_fighter(fighter_id):
             bpy.data.objects.remove(obj, do_unlink=True)
 
     if rig_object is not None and rig_object.animation_data is not None:
-        idle = bpy.data.actions.get("idle")
-        if idle is not None:
-            rig_object.animation_data.action = idle
-            slots = getattr(idle, "slots", None)
+        action = bpy.data.actions.get(action_name)
+        if action is not None:
+            rig_object.animation_data.action = action
+            slots = getattr(action, "slots", None)
             if slots is not None and len(slots) > 0:
                 rig_object.animation_data.action_slot = slots[0]
     return rig_object
@@ -203,8 +203,8 @@ def setup_render():
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "Filmic"
     scene.render.image_settings.file_format = "PNG"
-    # A settled point in the two-second idle loop.
-    scene.frame_set(20)
+    # A settled point in the pose clip.
+    scene.frame_set(int(os.environ.get("BLOODLINE_FRAME", "18")))
     bpy.context.view_layer.update()
 
 
@@ -233,7 +233,7 @@ def render_to(path):
 def shoot_fighter(fighter_id, arena):
     print("=== screenshot: %s ===" % fighter_id)
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    import_fighter(fighter_id)
+    import_fighter(fighter_id, os.environ.get("BLOODLINE_ACTION", "guard"))
     build_arena(arena)
     setup_render()
     # The match camera looks at the midpoint of the two fighters, so a solo
@@ -245,8 +245,8 @@ def shoot_fighter(fighter_id, arena):
         loc = tuple(float(v) for v in loc_part.split(","))
         tgt = tuple(float(v) for v in tgt_part.split(","))
     else:
-        loc = (0.75, 4.1, 1.85)
-        tgt = (0.0, 0.0, 0.95)
+        loc = (0.70, 3.35, 1.55)
+        tgt = (0.0, 0.0, 0.92)
     build_camera(loc, tgt)
     os.makedirs(OUT_DIR, exist_ok=True)
     dump_scene()
@@ -261,14 +261,14 @@ def shoot_roster(order, arena):
     spacing = 2.45
     start = -(len(order) - 1) * spacing * 0.5
     for index, fighter_id in enumerate(order):
-        rig_object = import_fighter(fighter_id)
+        rig_object = import_fighter(fighter_id, os.environ.get("BLOODLINE_ACTION", "guard"))
         if rig_object is not None:
             rig_object.location = (start + index * spacing, 0.0, 0.0)
         print("    placed %s" % fighter_id)
 
     build_arena(arena)
     setup_render()
-    bpy.context.scene.frame_set(20)
+    bpy.context.scene.frame_set(int(os.environ.get("BLOODLINE_FRAME", "18")))
     bpy.context.view_layer.update()
 
     # Frame the line-up.

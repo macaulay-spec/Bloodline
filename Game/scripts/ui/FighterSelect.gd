@@ -85,14 +85,18 @@ func _make_card(fighter_id: String) -> Control:
 	column.add_theme_constant_override("separation", 6)
 	panel.add_child(column)
 
-	var portrait := TextureRect.new()
-	portrait.custom_minimum_size = Vector2(272, 150)
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	var portrait_path := String(ContentDB.get_fighter(fighter_id).get("portrait", ""))
-	if not portrait_path.is_empty() and ResourceLoader.exists(portrait_path):
-		portrait.texture = load(portrait_path)
-	column.add_child(portrait)
+	# The card shows the fighter in the arena, the same shot the player sees
+	# in the match, with the portrait as a fallback.
+	var shot := TextureRect.new()
+	shot.custom_minimum_size = Vector2(272, 153)
+	shot.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shot.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	var shot_path := ContentDB.fighter_screenshot(fighter_id)
+	if shot_path.is_empty() or not ResourceLoader.exists(shot_path):
+		shot_path = ContentDB.fighter_portrait(fighter_id)
+	if not shot_path.is_empty() and ResourceLoader.exists(shot_path):
+		shot.texture = load(shot_path)
+	column.add_child(shot)
 
 	var name_label := BloodlineTheme.title(ContentDB.fighter_name(fighter_id), 22)
 	column.add_child(name_label)

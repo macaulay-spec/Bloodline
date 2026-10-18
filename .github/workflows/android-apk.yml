@@ -139,16 +139,23 @@ jobs:
           ~/godot/godot --headless --path Game --import
 
       - name: Export the debug APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ env.HOME }}/.android/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euo pipefail
+          # The env context is not available in a step's env block, so the
+          # keystore variables are exported here, where $HOME is the real
+          # home of the runner.
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           # Godot resolves the output path relative to the project directory,
           # so the export is run from inside Game/ and the path is relative.
           cd Game
           mkdir -p build
+          echo "== Keystore check =="
+          echo "path: $GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
+          keytool -list -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" \
+            -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
+            -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" 2>&1 | head -12 || true
           echo "== Godot version =="
           ~/godot/godot --version
           echo "== Export templates =="

@@ -72,11 +72,14 @@ func build() -> void:
 
 
 func _portrait(fighter_id: String) -> TextureRect:
+	# The fighter in the ring, so the versus card matches the match itself.
 	var portrait := TextureRect.new()
-	portrait.custom_minimum_size = Vector2(220, 200)
+	portrait.custom_minimum_size = Vector2(320, 180)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	var path := String(ContentDB.get_fighter(fighter_id).get("portrait", ""))
+	var path := ContentDB.fighter_screenshot(fighter_id)
+	if path.is_empty() or not ResourceLoader.exists(path):
+		path = ContentDB.fighter_portrait(fighter_id)
 	if not path.is_empty() and ResourceLoader.exists(path):
 		portrait.texture = load(path)
 	return portrait
@@ -88,9 +91,9 @@ func _process(delta: float) -> void:
 	var t := clampf(_elapsed / 0.5, 0.0, 1.0)
 	var eased := 1.0 - pow(1.0 - t, 3.0)
 	if _player_portrait != null:
-		_player_portrait.position.x = lerpf(-220.0, 0.0, eased)
+		_player_portrait.position.x = lerpf(-340.0, 0.0, eased)
 	if _enemy_portrait != null:
-		_enemy_portrait.position.x = lerpf(220.0, 0.0, eased)
+		_enemy_portrait.position.x = lerpf(340.0, 0.0, eased)
 
 	if _elapsed >= HOLD_TIME and not _done:
 		_done = true
