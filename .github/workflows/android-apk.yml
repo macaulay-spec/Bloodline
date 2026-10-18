@@ -145,7 +145,7 @@ jobs:
           set -uo pipefail
           cd Game
           mkdir -p build
-          ~/godot/godot --headless --path Game res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
+          ~/godot/godot --headless --path . res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
           code=${PIPESTATUS[0]}
           echo "== smoke exit code: $code =="
           if grep -q "SCRIPT ERROR" build/smoke.log; then
