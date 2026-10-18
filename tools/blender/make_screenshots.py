@@ -187,6 +187,12 @@ def import_fighter(fighter_id, action_name="guard"):
             slots = getattr(action, "slots", None)
             if slots is not None and len(slots) > 0:
                 rig_object.animation_data.action_slot = slots[0]
+
+    if rig_object is not None:
+        # The fighters are modelled facing -Y, the way they stand in the
+        # ring. The camera is on the +Y side, so the rig is turned around
+        # to face the lens.
+        rig_object.rotation_euler = (0.0, 0.0, math.pi)
     return rig_object
 
 

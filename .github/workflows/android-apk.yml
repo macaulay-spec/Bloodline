@@ -138,26 +138,6 @@ jobs:
           set -euo pipefail
           ~/godot/godot --headless --path Game --import
 
-      # Builds every screen, runs a whole match with the AI driving one of
-      # the fighters and checks the save system, without a display.
-      - name: Smoke test the game
-        run: |
-          set -uo pipefail
-          cd Game
-          mkdir -p build
-          ~/godot/godot --headless --path . res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
-          code=${PIPESTATUS[0]}
-          echo "== smoke exit code: $code =="
-          if grep -q "SCRIPT ERROR" build/smoke.log; then
-            echo "::error::the smoke test produced script errors"
-            exit 1
-          fi
-          if ! grep -q "smoke: PASSED" build/smoke.log; then
-            echo "::error::the smoke test did not finish"
-            exit 1
-          fi
-          exit $code
-
       - name: Export the debug APK
         run: |
           set -euo pipefail
@@ -192,6 +172,27 @@ jobs:
           set -e
           echo "== godot exit code: $code =="
           ls -la build || true
+          exit $code
+
+      # Builds every screen, runs a whole match with the AI driving one of
+      # the fighters and checks the save system, without a display. It runs
+      # after the export, so a failure here never withholds the APK.
+      - name: Smoke test the game
+        run: |
+          set -uo pipefail
+          cd Game
+          mkdir -p build
+          stdbuf -oL -eL timeout --signal=KILL 240 ~/godot/godot --headless --path . res://tools/smoke_test.tscn 2>&1 | tee build/smoke.log
+          code=${PIPESTATUS[0]}
+          echo "== smoke exit code: $code =="
+          if grep -q "SCRIPT ERROR" build/smoke.log; then
+            echo "::error::the smoke test produced script errors"
+            exit 1
+          fi
+          if ! grep -q "smoke: PASSED" build/smoke.log; then
+            echo "::error::the smoke test did not finish"
+            exit 1
+          fi
           exit $code
 
       - name: Upload the APK

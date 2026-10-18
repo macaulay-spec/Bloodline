@@ -31,6 +31,9 @@ const SCREEN_FRAMES := 4
 ## How many simulated frames the match is run for.
 const MATCH_FRAMES := 600
 
+## The test must never run longer than this many frames, whatever happens.
+const FRAME_BUDGET := 6000
+
 var _queue: Array[String] = []
 
 var _current: Node = null
@@ -47,6 +50,8 @@ var _match_frames: int = 0
 
 var _damage_seen: float = 0.0
 
+var _frames_used: int = 0
+
 
 func _ready() -> void:
 	_queue = SCREENS.duplicate()
@@ -54,6 +59,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	_frames_used += 1
+	if _frames_used > FRAME_BUDGET:
+		_failures += 1
+		push_error("smoke: the frame budget of %d was exhausted in phase %s" % [FRAME_BUDGET, _phase])
+		_finish()
+		return
 	match _phase:
 		"screens":
 			_step_screens()

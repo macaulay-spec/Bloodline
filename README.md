@@ -48,6 +48,10 @@ There are no placeholder buttons.
 
 ### The roster
 
+Every shot below is the fighter standing in the Circuit Pit, rendered from
+the same model, rig, costume bake and animation the match loads — the same
+image the fighter select, collection and versus card show in game.
+
 | Fighter | Style | Notes |
 | --- | --- | --- |
 | The Unbound | Balanced | Veil Reinforcement, 50 meter |
@@ -56,6 +60,34 @@ There are no placeholder buttons.
 | Kael | Pressure | Heat and sustain, unlock: win 2 matches |
 | Sable | Space | Odd spacing, unlock: win 5 matches |
 | Voss | Boss | Arrives with the Veil campaign |
+
+#### The Unbound — balanced, Veil Reinforcement
+
+![The Unbound](Game/assets/screenshots/unbound.png)
+
+#### Nyra — rushdown
+
+![Nyra](Game/assets/screenshots/nyra.png)
+
+#### Dagan — defender
+
+![Dagan](Game/assets/screenshots/dagan.png)
+
+#### Kael — pressure
+
+![Kael](Game/assets/screenshots/kael.png)
+
+#### Sable — space
+
+![Sable](Game/assets/screenshots/sable.png)
+
+#### Voss — boss
+
+![Voss](Game/assets/screenshots/voss.png)
+
+#### The full roster
+
+![The roster](Game/assets/screenshots/roster.png)
 
 ### The arenas
 
@@ -122,6 +154,7 @@ Game/                       Godot project root
   assets/
     characters/*.glb        six fighters, 13 animation clips each
     portraits/*.png         fighter select portraits, rendered from the same rig
+    screenshots/*.png       the fighter standing in the arena, used in the menus and the README
     preview/*.png           turnaround renders used for art review
 
 tools/
@@ -130,6 +163,7 @@ tools/
     bloodline_anim.py       the 13 shared animation clips
     generate_fighters.py    the six-fighter roster generator
     make_portraits.py       portrait renderer
+    make_screenshots.py     in-arena screenshot renderer
     preview_fighter.py      turnaround renderer
   gdscript/
     reorder_definitions.py  keeps the GDScript in gdtoolkit's class order
@@ -149,6 +183,7 @@ from a third party and nothing has to be downloaded.
 # Requires Blender 4.5 with the bpy module.
 LD_LIBRARY_PATH=... python tools/blender/generate_fighters.py
 LD_LIBRARY_PATH=... python tools/blender/make_portraits.py
+LD_LIBRARY_PATH=... python tools/blender/make_screenshots.py
 LD_LIBRARY_PATH=... python tools/blender/preview_fighter.py unbound
 ```
 
@@ -185,11 +220,12 @@ gdformat Game/scripts
 
 # Import the project and export a debug APK locally.
 godot --headless --path Game --import
-godot --headless --path Game --export-debug "Android" Game/build/bloodline-debug.apk
+cd Game && godot --headless --export-debug "Android" build/bloodline-debug.apk
 ```
 
 The Android export needs JDK 17, the Android SDK (platform-tools,
 build-tools 35.0.1, platforms android-35) and the Godot 4.7.2 export
 templates installed at
-`~/.local/share/godot/export_templates/4.7.2-stable/`. The CI workflow
-does all of this for you.
+`~/.local/share/godot/export_templates/4.7.2.stable/`. The export output
+path is resolved relative to the project directory, so the export is run
+from inside `Game/`. The CI workflow does all of this for you.
