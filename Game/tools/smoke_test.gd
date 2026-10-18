@@ -48,7 +48,7 @@ var _failures: int = 0
 
 var _phase: String = "screens"
 
-var _match: Node = null
+var _match: MatchManager = null
 
 var _match_frames: int = 0
 
