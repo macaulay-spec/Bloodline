@@ -252,6 +252,13 @@ def build_fighter(fighter_id, spec):
     arm = rig.build_armature("Rig")
     body = rig.build_body(arm, spec["proportions"], name="Body")
 
+    # Bind the body to the rig. Without a live Armature modifier the glTF
+    # exporter treats the mesh as static, so the fighter would never deform.
+    body_arm_mod = body.modifiers.new("Armature", "ARMATURE")
+    body_arm_mod.object = arm
+    body.parent = arm
+    body.matrix_parent_inverse = arm.matrix_world.inverted()
+
     costume = build_costume(body, arm, spec, os.path.abspath(OUT_DIR))
 
     # Join the costume into one mesh, then bind it to the rig.

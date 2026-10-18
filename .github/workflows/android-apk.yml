@@ -13,8 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GODOT_VERSION: "4.7.2-stable"
+  # The export templates directory is named after Godot's full version
+  # config string, which is "4.7.2.stable" - a dot, not a dash.
   GODOT_RELEASE: "4.7.2-stable"
+  GODOT_VERSION_CONFIG: "4.7.2.stable"
 
 jobs:
   build:
@@ -70,37 +72,21 @@ jobs:
         if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          version="${GODOT_VERSION}"
-          target="$HOME/.local/share/godot/export_templates/${version}"
+          target="$HOME/.local/share/godot/export_templates/${GODOT_VERSION_CONFIG}"
           mkdir -p "$target"
           cd /tmp
-          url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${version}_export_templates.tpz"
+          # NOTE: the download FILE name uses a dash, the target DIRECTORY uses a dot.
+          url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
           echo "Downloading $url"
           curl -fSL --retry 3 --retry-delay 5 -o templates.tpz "$url"
           unzip -q -o templates.tpz -d /tmp/templates
+          # The .tpz unpacks to a "templates" folder.
           cp -r /tmp/templates/templates/. "$target"/
           rm -rf /tmp/templates templates.tpz
+          echo "Template directory contents:"
           ls "$target" | head -20
           test -f "$target/android_debug.apk"
-
-      - name: Configure Godot editor settings
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.config/godot"
-          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}"
-          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
-          [gd_resource type="EditorSettings" format=3]
-
-          [resource]
-          export/android/android_sdk_path = "$sdk"
-          export/android/java_sdk_path = "${JAVA_HOME:-/usr/lib/jvm/temurin-17-jdk-amd64}"
-          export/android/debug_keystore = "$HOME/.android/debug.keystore"
-          export/android/debug_keystore_user = "androiddebugkey"
-          export/android/debug_keystore_pass = "android"
-          filesystem/import/blender/enabled = false
-          network/connection/engine_version_update_mode = 0
-          EOF
-          echo "Editor settings written."
+          test -f "$target/android_release.apk"
 
       - name: Create the debug keystore
         run: |
@@ -112,6 +98,28 @@ jobs:
               -storepass android -dname "CN=Android Debug,O=Android,C=US" \
               -validity 9999 -deststoretype pkcs12
           fi
+          ls -la "$HOME/.android/debug.keystore"
+
+      - name: Configure Godot editor settings
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/godot"
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}"
+          java_home="${JAVA_HOME:-/usr/lib/jvm/temurin-17-jdk-amd64}"
+          cat > "$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$sdk"
+          export/android/java_sdk_path = "$java_home"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          filesystem/import/blender/enabled = false
+          network/connection/engine_version_update_mode = 0
+          EOF
+          echo "Editor settings written:"
+          cat "$HOME/.config/godot/editor_settings-4.7.tres"
 
       - name: Install Python tools
         run: python3 -m pip install --upgrade pip && python3 -m pip install "gdtoolkit==4.5.0"
@@ -120,9 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           cd Game
-          /opt/hostedtoolcache/Python/3.*/x64/bin/gdlint scripts 2>/dev/null \
-            || gdlint scripts \
-            || echo "gdlint reported issues (see above); continuing to the build."
+          gdlint scripts
 
       - name: Import the project
         run: |
@@ -130,10 +136,14 @@ jobs:
           ~/godot/godot --headless --path Game --import
 
       - name: Export the debug APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ env.HOME }}/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euo pipefail
           mkdir -p Game/build
-          ~/godot/godot --headless --path Game --export-debug "Android" Game/build/bloodline-debug.apk
+          ~/godot/godot --headless --path Game --export-debug "Android" Game/build/bloodline-debug.apk 2>&1 | tee Game/build/export.log
           ls -la Game/build
 
       - name: Upload the APK

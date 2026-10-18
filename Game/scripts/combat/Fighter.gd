@@ -148,7 +148,6 @@ func setup(id: String, facing_side: int) -> void:
 
 	_build_model()
 	_build_boxes()
-	_apply_state()
 
 
 func _build_model() -> void:
