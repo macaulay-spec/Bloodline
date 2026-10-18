@@ -678,3 +678,99 @@ func debug_state() -> String:
 		"%s: state=%d move=%s frame=%d hp=%.0f meter=%.0f"
 		% [fighter_id, state, current_move_id, move_frame, health, meter]
 	)
+
+## --- The state, as the rest of the game sees it -----------------------------
+##
+## Other scripts never read the enum directly: they ask the fighter, so the
+## state machine stays in one place.
+
+
+## True while the fighter is standing still.
+func is_idle() -> bool:
+	return state == State.IDLE
+
+
+## True while the fighter is walking in either direction.
+func is_walking() -> bool:
+	return state == State.WALK_FORWARD or state == State.WALK_BACK
+
+
+## True while the fighter walks towards the opponent.
+func is_walking_forward() -> bool:
+	return state == State.WALK_FORWARD
+
+
+## True while the fighter walks away from the opponent.
+func is_walking_back() -> bool:
+	return state == State.WALK_BACK
+
+
+## True while the fighter winds up an attack.
+func is_startup() -> bool:
+	return state == State.STARTUP
+
+
+## True while the attack of the fighter is live.
+func is_active() -> bool:
+	return state == State.ACTIVE
+
+
+## True while the fighter recovers from an attack.
+func is_recovery() -> bool:
+	return state == State.RECOVERY
+
+
+## True while the fighter holds the guard.
+func is_blocking() -> bool:
+	return state == State.BLOCKING
+
+
+## True while the guard of the fighter is broken.
+func is_guard_broken() -> bool:
+	return state == State.GUARD_BROKEN
+
+
+## True while the fighter is on the floor.
+func is_knocked_down() -> bool:
+	return state == State.KNOCKDOWN
+
+
+## True while the fighter is out of the round.
+func is_knocked_out() -> bool:
+	return state == State.KNOCKED_OUT
+
+
+## True while the round intro is still playing.
+func is_intro() -> bool:
+	return state == State.INTRO
+
+
+## True once the match is over for the fighter.
+func is_finished() -> bool:
+	return state == State.VICTORY or state == State.DEFEAT
+
+
+## True when the fighter won the match.
+func is_victory() -> bool:
+	return state == State.VICTORY
+
+
+## True when the fighter lost the match.
+func is_defeat() -> bool:
+	return state == State.DEFEAT
+
+
+## Puts the fighter into the round intro.
+func enter_intro() -> void:
+	state = State.INTRO
+
+
+## Puts the fighter back to a neutral stance.
+func enter_idle() -> void:
+	state = State.IDLE
+
+
+## Ends the match for the fighter.
+func enter_result(won: bool) -> void:
+	state = State.VICTORY if won else State.DEFEAT
+

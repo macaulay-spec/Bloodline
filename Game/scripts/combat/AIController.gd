@@ -100,12 +100,7 @@ func _profile() -> Dictionary:
 func think(_delta: float) -> void:
 	if fighter == null or opponent == null:
 		return
-	if (
-		fighter.state == Fighter.State.KNOCKED_OUT
-		or fighter.state == Fighter.State.VICTORY
-		or fighter.state == Fighter.State.DEFEAT
-		or fighter.state == Fighter.State.INTRO
-	):
+	if fighter.is_knocked_out() or fighter.is_finished() or fighter.is_intro():
 		return
 
 	_update_combo_plan()
@@ -144,11 +139,11 @@ func _skill_name() -> String:
 
 ## How dangerous the opponent's current action looks.
 func _opponent_threat() -> String:
-	if opponent.state == Fighter.State.STARTUP:
+	if opponent.is_startup():
 		return "attack"
-	if opponent.state == Fighter.State.ACTIVE:
+	if opponent.is_active():
 		return "attack"
-	if opponent.state == Fighter.State.RECOVERY:
+	if opponent.is_recovery():
 		return "recover"
 	return "neutral"
 

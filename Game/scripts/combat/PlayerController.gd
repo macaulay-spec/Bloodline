@@ -62,23 +62,16 @@ func poll() -> void:
 	# Movement: forward walks towards the opponent, back retreats.
 	var wants_forward := request_forward
 	var wants_back := request_back
-	if (
-		fighter.state == Fighter.State.IDLE
-		or fighter.state == Fighter.State.WALK_FORWARD
-		or fighter.state == Fighter.State.WALK_BACK
-	):
+	if fighter.is_idle() or fighter.is_walking():
 		if wants_forward and not wants_back:
-			if fighter.state != Fighter.State.WALK_FORWARD:
+			if not fighter.is_walking_forward():
 				fighter.start_move("walk_forward")
 		elif wants_back and not wants_forward:
-			if fighter.state != Fighter.State.WALK_BACK:
+			if not fighter.is_walking_back():
 				fighter.start_move("walk_back")
 		elif not wants_forward and not wants_back:
-			if (
-				fighter.state == Fighter.State.WALK_FORWARD
-				or fighter.state == Fighter.State.WALK_BACK
-			):
-				fighter.state = Fighter.State.IDLE
+			if fighter.is_walking():
+				fighter.enter_idle()
 				fighter.velocity.x = 0.0
 
 

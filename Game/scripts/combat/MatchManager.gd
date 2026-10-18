@@ -150,8 +150,8 @@ func _begin_round() -> void:
 	_damage_this_round = {player.fighter_id: 0.0, enemy.fighter_id: 0.0}
 	_combo_count = {player.fighter_id: 0, enemy.fighter_id: 0}
 	_last_hit_frame = {player.fighter_id: -999, enemy.fighter_id: -999}
-	player.state = Fighter.State.INTRO
-	enemy.state = Fighter.State.INTRO
+	player.enter_intro()
+	enemy.enter_intro()
 	player.health = float(player.data.get("health", CombatConstants.HEALTH_MAX))
 	enemy.health = float(enemy.data.get("health", CombatConstants.HEALTH_MAX))
 	player.guard = float(player.data.get("guard_max", 100.0))
@@ -174,8 +174,8 @@ func simulate(delta: float) -> void:
 			_intro_frames -= 1
 			if _intro_frames <= 0:
 				phase = Phase.FIGHT
-				player.state = Fighter.State.IDLE
-				enemy.state = Fighter.State.IDLE
+				player.enter_idle()
+				enemy.enter_idle()
 		Phase.FIGHT:
 			_simulate_fight(delta)
 		Phase.ROUND_END:
@@ -213,9 +213,9 @@ func _resolve_hits() -> void:
 
 
 func _try_hit(attacker: Fighter, defender: Fighter) -> void:
-	if attacker.state != Fighter.State.ACTIVE or attacker.move_has_hit:
+	if not attacker.is_active() or attacker.move_has_hit:
 		return
-	if defender.state == Fighter.State.KNOCKED_OUT:
+	if defender.is_knocked_out():
 		return
 	var move := attacker.current_move
 	if move.is_empty():
@@ -229,7 +229,7 @@ func _try_hit(attacker: Fighter, defender: Fighter) -> void:
 		return
 
 	attacker.move_has_hit = true
-	var blocked := defender.state == Fighter.State.BLOCKING and defender.guard_held
+	var blocked := defender.is_blocking() and defender.guard_held
 	var damage := defender.receive_hit(attacker, move, blocked)
 	attacker.hit_landed.emit(defender, move, blocked)
 
@@ -248,9 +248,9 @@ func _try_hit(attacker: Fighter, defender: Fighter) -> void:
 	_combo_count[key] = int(_combo_count.get(key, 0)) + 1
 	_last_hit_frame[key] = Engine.get_physics_frames()
 
-	if defender.state == Fighter.State.GUARD_BROKEN:
+	if defender.is_guard_broken():
 		guard_break.emit(defender.fighter_id)
-	if defender.state == Fighter.State.KNOCKED_OUT:
+	if defender.is_knocked_out():
 		knockout.emit(defender.fighter_id)
 
 
@@ -277,11 +277,11 @@ func _resolve_pushboxes() -> void:
 
 
 func _check_round_end() -> void:
-	if player.state == Fighter.State.KNOCKED_OUT or enemy.state == Fighter.State.KNOCKED_OUT:
+	if player.is_knocked_out() or enemy.is_knocked_out():
 		var winner := ""
-		if player.state == Fighter.State.KNOCKED_OUT and enemy.state == Fighter.State.KNOCKED_OUT:
+		if player.is_knocked_out() and enemy.is_knocked_out():
 			winner = ""
-		elif player.state == Fighter.State.KNOCKED_OUT:
+		elif player.is_knocked_out():
 			winner = enemy.fighter_id
 		else:
 			winner = player.fighter_id
@@ -296,8 +296,8 @@ func _end_round(winner_id: String) -> void:
 	_round_end_frames = CombatConstants.ROUND_END_FRAMES
 	if winner_id != "":
 		rounds_won[winner_id] = int(rounds_won.get(winner_id, 0)) + 1
-	player.state = Fighter.State.VICTORY if winner_id == player.fighter_id else Fighter.State.DEFEAT
-	enemy.state = Fighter.State.VICTORY if winner_id == enemy.fighter_id else Fighter.State.DEFEAT
+	player.enter_result(winner_id == player.fighter_id)
+	enemy.enter_result(winner_id == enemy.fighter_id)
 	if winner_id == "":
 		time_expired.emit()
 

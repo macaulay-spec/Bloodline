@@ -1,0 +1,4 @@
+# The fighter owns the whole state machine of the game, so it exposes one
+# small query for every state it can be in. Everything else in this file
+# follows the gdtoolkit defaults.
+max-public-methods: 32
