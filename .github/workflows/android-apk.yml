@@ -12,6 +12,9 @@ concurrency:
   group: android-apk-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 env:
   # The export templates directory is named after Godot's full version
   # config string, which is "4.7.2.stable" - a dot, not a dash.
@@ -143,8 +146,27 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p Game/build
+          echo "== Godot version =="
+          ~/godot/godot --version
+          echo "== Export templates =="
+          ls -la "$HOME/.local/share/godot/export_templates/" || true
+          ls -la "$HOME/.local/share/godot/export_templates/4.7.2.stable/" | head -30 || true
+          echo "== Android SDK =="
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          echo "JAVA_HOME=${JAVA_HOME:-unset}"
+          ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/build-tools" 2>/dev/null || true
+          ls "${ANDROID_SDK_ROOT:-${ANDROID_HOME}}/platforms" 2>/dev/null || true
+          echo "== Editor settings =="
+          cat "$HOME/.config/godot/editor_settings-4.7.tres" || true
+          echo "== Export =="
+          set +e
           ~/godot/godot --headless --path Game --export-debug "Android" Game/build/bloodline-debug.apk 2>&1 | tee Game/build/export.log
-          ls -la Game/build
+          code=${PIPESTATUS[0]}
+          set -e
+          echo "== godot exit code: $code =="
+          ls -la Game/build || true
+          exit $code
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
@@ -164,3 +186,32 @@ jobs:
             ~/.config/godot/editor_settings-4.7.tres
           if-no-files-found: ignore
           retention-days: 7
+
+      # The build-log artifact is not readable from every network, so the
+      # diagnostics are also published to a branch that the API can reach.
+      - name: Publish build diagnostics
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          work="$RUNNER_TEMP/diagnostics"
+          rm -rf "$work"
+          mkdir -p "$work"
+          cp -f Game/build/export.log "$work/export.log" 2>/dev/null || true
+          cp -f Game/export_presets.cfg "$work/export_presets.cfg" 2>/dev/null || true
+          cp -f "$HOME/.config/godot/editor_settings-4.7.tres" "$work/editor_settings-4.7.tres" 2>/dev/null || true
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "commit: ${{ github.sha }}"
+            echo "attempt: ${{ github.run_attempt }}"
+          } > "$work/run.txt"
+          cd "$work"
+          git init -q .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "CI diagnostics for run ${{ github.run_id }}"
+          git push -q "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/ci-diagnostics
+          echo "diagnostics published"
